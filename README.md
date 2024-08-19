@@ -172,7 +172,58 @@ prediction-market/
 └── tsconfig.json
 ```
 
+Now, let's go through the purpose of each file and directory we've created:
 
+src/components/:
+
+Purpose: Contains reusable React components.
+Header.tsx: The top navigation bar component.
+Footer.tsx: The bottom footer component.
+These components will be used across multiple pages for consistent layout.
+
+
+src/app/:
+
+Purpose: Contains the main application pages and routes.
+layout.tsx: The root layout component that wraps all pages.
+page.tsx: The home page component.
+(routes)/: A group of routes that share the same layout.
+
+Each subdirectory (markets/, market/[id]/, etc.) represents a route in your application.
+page.tsx in each subdirectory is the main component for that route.
+
+
+
+
+src/utils/:
+
+Purpose: Contains utility functions and helpers.
+api.ts: Will contain functions for making API calls to your backend.
+web3.ts: Will contain functions for interacting with the blockchain and smart contracts.
+
+
+src/hooks/:
+
+Purpose: Contains custom React hooks for reusable logic.
+useMarkets.ts: A hook for fetching and managing market data.
+useBets.ts: A hook for fetching and managing bet data.
+
+
+src/contexts/:
+
+Purpose: Contains React context providers for global state management.
+Web3Context.tsx: Will provide Web3 connection state and functions to the entire app.
+
+
+
+How these will work together:
+
+The layout.tsx file sets up the overall structure of your app, including the ChakraProvider for styling, and the Header and Footer components.
+Each page.tsx file in the app/ directory and its subdirectories represents a different route in your application. These will use the components, hooks, and utilities to render the page content.
+Components like Header and Footer will be reused across all pages due to their inclusion in the root layout.
+Custom hooks (useMarkets, useBets) will be used within your page components to fetch and manage data.
+The Web3Context will wrap your application (you'll need to add this to layout.tsx) to provide Web3 functionality throughout the app.
+Utility functions in api.ts and web3.ts will be called from within your components or hooks to interact with your backend and the blockchain.
 
 ## Getting Started
 
