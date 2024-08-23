@@ -27,7 +27,6 @@ import {
   TabPanel,
   useToast,
   Avatar,
-  AvatarBadge,
   Stat,
   StatLabel,
   StatNumber,
@@ -36,29 +35,23 @@ import {
   Grid,
   GridItem,
   Icon,
+  useColorModeValue,
   Input,
   InputGroup,
-  InputRightElement,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
-  Progress,
-  Tooltip,
+  InputLeftElement,
   CircularProgress,
   CircularProgressLabel,
+  Tooltip,
+  Progress,
 } from '@chakra-ui/react';
-import { FaUserShield, FaUsers, FaChartBar, FaCoins, FaGavel, FaEdit, FaPause, FaTimes, FaCheck, FaPlus, FaMinus, FaExclamationTriangle } from 'react-icons/fa';
+import { FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
 const theme = extendTheme({
-  config: {
-    initialColorMode: 'light',
-    useSystemColorMode: false,
+  fonts: {
+    heading: '"Inter", sans-serif',
+    body: '"Inter", sans-serif',
   },
   colors: {
     brand: {
@@ -70,17 +63,12 @@ const theme = extendTheme({
   },
 });
 
+const MotionBox = motion(Box);
+
 interface Market {
   id: number;
-  creator: string;
   question: string;
-  description: string;
-  options: string[];
-  start_time: string;
-  end_time: string;
   status: string;
-  collateral_amount: string;
-  reward_amount: string;
 }
 
 interface Config {
@@ -98,9 +86,15 @@ const AdminDashboard = () => {
   const [config, setConfig] = useState<Config | null>(null);
   const [newAddress, setNewAddress] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+  const [filter, setFilter] = useState('All');
   const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+  const cardBgColor = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const accentColor = "blue.400";
+  const gradientColor = "linear(to-r, blue.400, purple.500)";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -202,375 +196,360 @@ const AdminDashboard = () => {
     }
   };
 
-  const openEditModal = (market: Market) => {
-    setSelectedMarket(market);
-    onOpen();
-  };
-
   if (isLoading) {
     return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
-        <Spinner size="xl" color="brand.500" thickness="4px" />
+      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
+        <Spinner size="xl" color={accentColor} thickness="4px" />
       </Box>
     );
   }
 
+  const filteredMarkets = markets.filter(market => 
+    filter === 'All' || market.status === filter
+  );
+
   return (
     <ChakraProvider theme={theme}>
-      <Box bg="gray.50" minHeight="100vh" py={8}>
+      <Box bg={bgColor} minHeight="100vh" py={12}>
         <Container maxW="container.xl">
-          <VStack spacing={8} align="stretch">
-            <Flex justifyContent="space-between" alignItems="center" bg="white" p={6} borderRadius="lg" boxShadow="md">
-              <VStack align="start" spacing={1}>
-                <Heading size="2xl" color="brand.500">Admin Dashboard</Heading>
-                <Text color="gray.500">Manage markets, whitelist, and platform settings</Text>
-              </VStack>
-              <Avatar size="xl" icon={<FaUserShield fontSize="2.5rem" />} bg="brand.500" color="white">
-                <AvatarBadge boxSize="1.25em" bg="green.500" />
-              </Avatar>
-            </Flex>
+          <VStack spacing={10} align="stretch">
+            <MotionBox
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Flex 
+                justifyContent="space-between" 
+                alignItems="center" 
+                bg={cardBgColor} 
+                p={8} 
+                borderRadius="2xl" 
+                boxShadow="xl"
+                bgGradient={gradientColor}
+              >
+                <VStack align="start" spacing={1}>
+                  <Heading size="2xl" color="white">Admin Dashboard</Heading>
+                  <Text color="whiteAlpha.800">Manage markets, whitelist, and platform settings</Text>
+                </VStack>
+                <Avatar size="xl" icon={<Icon as={FaUsers} fontSize="3rem" />} bg="white" color={accentColor} />
+              </Flex>
+            </MotionBox>
 
-            {/* Platform Overview */}
-            <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={6}>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium" isTruncated>
-                    <HStack spacing={2}>
-                      <Icon as={FaChartBar} color="brand.500" />
-                      <Text>Total Markets</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl" fontWeight="medium">
-                    {markets.length}
-                  </StatNumber>
-                </Stat>
-              </GridItem>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium" isTruncated>
-                    <HStack spacing={2}>
-                      <Icon as={FaUsers} color="brand.500" />
-                      <Text>Whitelisted Users</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl" fontWeight="medium">
-                    {whitelistedAddresses.length}
-                  </StatNumber>
-                </Stat>
-              </GridItem>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium" isTruncated>
-                    <HStack spacing={2}>
-                      <Icon as={FaCoins} color="brand.500" />
-                      <Text>Platform Fee</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl" fontWeight="medium">
-                    {config?.platform_fee}%
-                  </StatNumber>
-                </Stat>
-              </GridItem>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium" isTruncated>
-                    <HStack spacing={2}>
-                      <Icon as={FaGavel} color="brand.500" />
-                      <Text>Voting Time</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl" fontWeight="medium">
-                    {config?.voting_time / 3600}h
-                  </StatNumber>
-                </Stat>
-              </GridItem>
+            <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={8}>
+              {[
+                { label: 'Total Markets', icon: FaChartLine, value: markets.length, color: 'blue.400' },
+                { label: 'Whitelisted Users', icon: FaUsers, value: whitelistedAddresses.length, color: 'green.400' },
+                { label: 'Platform Fee', icon: FaCoins, value: `${config?.platform_fee}%`, color: 'yellow.400' },
+                { label: 'Voting Time', icon: FaGavel, value: `${config?.voting_time / 3600}h`, color: 'purple.400' },
+              ].map((stat, index) => (
+                <MotionBox
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  whileHover={{ y: -5, boxShadow: "2xl" }}
+                >
+                  <Stat 
+                    px={6} 
+                    py={8} 
+                    bg={cardBgColor}
+                    borderRadius="2xl" 
+                    boxShadow="xl"
+                    border="1px solid"
+                    borderColor={borderColor}
+                    position="relative"
+                    overflow="hidden"
+                  >
+                    <Box
+                      position="absolute"
+                      top="-20px"
+                      left="-20px"
+                      width="100px"
+                      height="100px"
+                      bg={`${stat.color}20`}
+                      borderRadius="full"
+                      filter="blur(20px)"
+                    />
+                    <StatLabel fontWeight="medium" color={textColor} fontSize="lg">
+                      <HStack spacing={2}>
+                        <Icon as={stat.icon} color={stat.color} boxSize={6} />
+                        <Text>{stat.label}</Text>
+                      </HStack>
+                    </StatLabel>
+                    <StatNumber fontSize="3xl" fontWeight="bold" color={stat.color} mt={2}>
+                      {stat.value}
+                    </StatNumber>
+                  </Stat>
+                </MotionBox>
+              ))}
             </Grid>
 
-            <Tabs variant="soft-rounded" colorScheme="brand">
-              <TabList bg="white" p={2} borderRadius="lg" boxShadow="sm">
-                <Tab>Market Management</Tab>
-                <Tab>Whitelist Management</Tab>
-                <Tab>Configuration</Tab>
-              </TabList>
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <Tabs variant="soft-rounded" colorScheme="blue" isLazy>
+                <TabList bg={cardBgColor} p={4} borderRadius="2xl" boxShadow="md">
+                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Market Management</Tab>
+                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Whitelist Management</Tab>
+                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Configuration</Tab>
+                </TabList>
 
-              <TabPanels mt={4}>
-                <TabPanel>
-                  <VStack spacing={4} align="stretch" bg="white" p={6} borderRadius="lg" boxShadow="md">
-                    <Heading size="lg" color="brand.500">Market Management</Heading>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>ID</Th>
-                          <Th>Question</Th>
-                          <Th>Status</Th>
-                          <Th>Actions</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {markets.map((market) => (
-                          <Tr key={market.id}>
-                            <Td>{market.id}</Td>
-                            <Td>{market.question}</Td>
-                            <Td>
-                              <Badge colorScheme={market.status === 'Active' ? 'green' : 'red'}>
-                                {market.status}
-                              </Badge>
-                            </Td>
-                            <Td>
-                              <HStack spacing={2}>
-                                <Tooltip label="Pause">
-                                  <Button size="sm" colorScheme="yellow" onClick={() => handleMarketAction(market.id, 'pause')}>
-                                    <Icon as={FaPause} />
-                                  </Button>
-                                </Tooltip>
-                                <Tooltip label="Close">
-                                  <Button size="sm" colorScheme="red" onClick={() => handleMarketAction(market.id, 'close')}>
-                                    <Icon as={FaTimes} />
-                                  </Button>
-                                </Tooltip>
-                                <Tooltip label="Cancel">
-                                  <Button size="sm" colorScheme="purple" onClick={() => handleMarketAction(market.id, 'cancel')}>
-                                    <Icon as={FaTimes} />
-                                  </Button>
-                                </Tooltip>
-                                <Tooltip label="Edit">
-                                  <Button size="sm" colorScheme="blue" onClick={() => openEditModal(market)}>
-                                    <Icon as={FaEdit} />
-                                  </Button>
-                                </Tooltip>
-                              </HStack>
-                            </Td>
+                <TabPanels mt={6}>
+                  <TabPanel>
+                    <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
+                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Market Management</Heading>
+                      <HStack mb={4}>
+                        <InputGroup>
+                          <InputLeftElement pointerEvents="none">
+                            <Icon as={FaSearch} color="gray.300" />
+                          </InputLeftElement>
+                          <Input placeholder="Search markets" onChange={(e) => setFilter(e.target.value)} />
+                        </InputGroup>
+                        <Button onClick={() => setFilter('All')}>All</Button>
+                        <Button onClick={() => setFilter('Active')}>Active</Button>
+                        <Button onClick={() => setFilter('Paused')}>Paused</Button>
+                        <Button onClick={() => setFilter('Closed')}>Closed</Button>
+                      </HStack>
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>ID</Th>
+                            <Th>Question</Th>
+                            <Th>Status</Th>
+                            <Th>Actions</Th>
                           </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </VStack>
-                </TabPanel>
-                <TabPanel>
-                  <VStack spacing={4} align="stretch" bg="white" p={6} borderRadius="lg" boxShadow="md">
-                    <Heading size="lg" color="brand.500">Whitelist Management</Heading>
-                    <HStack>
-                      <InputGroup size="md">
-                        <Input
-                          pr="4.5rem"
-                          type="text"
-                          placeholder="Enter address to whitelist"
-                          value={newAddress}
-                          onChange={(e) => setNewAddress(e.target.value)}
-                        />
-                        <InputRightElement width="4.5rem">
-                          <Button h="1.75rem" size="sm" onClick={handleAddToWhitelist}>
-                            Add
-                          </Button>
-                        </InputRightElement>
-                      </InputGroup>
-                    </HStack>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Address</Th>
-                          <Th>Action</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {whitelistedAddresses.map((address) => (
-                          <Tr key={address}>
-                            <Td>{address}</Td>
-                            <Td>
-                              <Button colorScheme="red" size="sm" onClick={() => handleRemoveFromWhitelist(address)}>
-                                Remove
-                              </Button>
-                            </Td>
+                        </Thead>
+                        <Tbody>
+                          {filteredMarkets.map((market) => (
+                            <Tr key={market.id}>
+                              <Td>{market.id}</Td>
+                              <Td>{market.question}</Td>
+                              <Td>
+                                <Badge colorScheme={market.status === 'Active' ? 'green' : 'yellow'}>
+                                  {market.status}
+                                </Badge>
+                              </Td>
+                              <Td>
+                                <HStack spacing={2}>
+                                  <Tooltip label="Pause">
+                                    <Button size="sm" colorScheme="yellow" onClick={() => handleMarketAction(market.id, 'pause')}>
+                                      <Icon as={FaPause} />
+                                    </Button>
+                                  </Tooltip>
+                                  <Tooltip label="Close">
+                                    <Button size="sm" colorScheme="red" onClick={() => handleMarketAction(market.id, 'close')}>
+                                      <Icon as={FaTimes} />
+                                    </Button>
+                                  </Tooltip>
+                                  <Tooltip label="Cancel">
+                                    <Button size="sm" colorScheme="purple" onClick={() => handleMarketAction(market.id, 'cancel')}>
+                                      <Icon as={FaTimes} />
+                                    </Button>
+                                  </Tooltip>
+                                </HStack>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </TabPanel>
+                  <TabPanel>
+                    <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
+                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Whitelist Management</Heading>
+                      <HStack mb={4}>
+                        <Input placeholder="Enter address to whitelist" value={newAddress} onChange={(e) => setNewAddress(e.target.value)} />
+                        <Button onClick={handleAddToWhitelist} colorScheme="blue">Add</Button>
+                      </HStack>
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>Address</Th>
+                            <Th>Action</Th>
                           </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </VStack>
-                </TabPanel>
-                <TabPanel>
-                  <VStack spacing={4} align="stretch" bg="white" p={6} borderRadius="lg" boxShadow="md">
-                    <Heading size="lg" color="brand.500">Platform Configuration</Heading>
-                    <Grid templateColumns="repeat(2, 1fr)" gap={6}>
-                      <GridItem>
-                        <Stat>
-                          <StatLabel>Admin Address</StatLabel>
-                          <StatNumber fontSize="md">{config?.admin}</StatNumber>
-                        </Stat>
-                      </GridItem>
-                      <GridItem>
-                        <Stat>
-                          <StatLabel>Coin Denomination</StatLabel>
-                          <StatNumber fontSize="md">{config?.coin_denom}</StatNumber>
-                        </Stat>
-                      </GridItem>
-                      <GridItem>
-                        <Stat>
-                          <StatLabel>Platform Fee</StatLabel>
-                          <StatNumber fontSize="md">{config?.platform_fee}%</StatNumber>
-                        </Stat>
-                      </GridItem>
-                      <GridItem>
-                        <Stat>
-                          <StatLabel>Treasury Account</StatLabel>
-                          <StatNumber fontSize="md">{config?.protocol_treasury_account}</StatNumber>
-                        </Stat>
-                      </GridItem>
-                      <GridItem>
-                        <Stat>
-                          <StatLabel>Challenging Time</StatLabel>
-                          <StatNumber fontSize="md">{config?.challenging_time / 3600} hours</StatNumber>
-                        </Stat>
-                      </GridItem>
-                      <GridItem>
-                        <Stat>
-                          <StatLabel>Voting Time</StatLabel>
-                          <StatNumber fontSize="md">{config?.voting_time / 3600} hours</StatNumber>
-                        </Stat>
-                      </GridItem>
-                    </Grid>
-                    <Button colorScheme="brand" mt={4} onClick={() => toast({
-                      title: "Feature not implemented",
-                      description: "Editing configuration is not available in this demo.",
-                      status: "info",
+                        </Thead>
+                        <Tbody>
+                          {whitelistedAddresses.map((address) => (
+                            <Tr key={address}>
+                              <Td>{address}</Td>
+                              <Td>
+                                <Button colorScheme="red" size="sm" onClick={() => handleRemoveFromWhitelist(address)}>
+                                  Remove
+                                </Button>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </TabPanel>
+                  <TabPanel>
+                    <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
+                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Platform Configuration</Heading>
+                      <Grid templateColumns="repeat(2, 1fr)" gap={6}>
+                        <GridItem>
+                          <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Admin Address</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.admin}</StatNumber>
+                          </Stat>
+                        </GridItem>
+                        <GridItem>
+                          <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Coin Denomination</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.coin_denom}</StatNumber>
+                          </Stat>
+                        </GridItem>
+                        <GridItem>
+                          <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Platform Fee</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.platform_fee}%</StatNumber>
+                          </Stat>
+                        </GridItem>
+                        <GridItem>
+                          <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Treasury Account</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.protocol_treasury_account}</StatNumber>
+                          </Stat>
+                        </GridItem>
+                        <GridItem>
+                          <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Challenging Time</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.challenging_time / 3600} hours</StatNumber>
+                          </Stat>
+                        </GridItem>
+                        <GridItem>
+                          <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Voting Time</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.voting_time / 3600} hours</StatNumber>
+                          </Stat>
+                        </GridItem>
+                      </Grid>
+                      <Button 
+                        mt={6} 
+                        bgGradient={gradientColor} 
+                        color="white" 
+                        _hover={{
+                          bgGradient: "linear(to-r, blue.500, purple.600)",
+                        }}
+                        onClick={() => toast({
+                          title: "Feature not implemented",
+                          description: "Editing configuration is not available in this demo.",
+                          status: "info",
+                          duration: 3000,
+                          isClosable: true,
+                        })}
+                      >
+                        Edit Configuration
+                      </Button>
+                    </Box>
+                  </TabPanel>
+                </TabPanels>
+              </Tabs>
+            </MotionBox>
+
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
+              <Box bg={cardBgColor} borderRadius="2xl" boxShadow="xl" p={6}>
+                <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Platform Health</Heading>
+                <Grid templateColumns="repeat(3, 1fr)" gap={6}>
+                  <GridItem>
+                    <VStack>
+                      <CircularProgress value={99.99} color="green.400" size="120px">
+                        <CircularProgressLabel>99.99%</CircularProgressLabel>
+                      </CircularProgress>
+                      <Text mt={2} textAlign="center" fontWeight="medium">System Uptime</Text>
+                    </VStack>
+                  </GridItem>
+                  <GridItem>
+                    <Stat>
+                      <StatLabel fontWeight="medium" color={textColor}>Average Response Time</StatLabel>
+                      <StatNumber color={accentColor}>120ms</StatNumber>
+                      <StatHelpText>
+                        <StatArrow type="decrease" />
+                        15% improvement
+                      </StatHelpText>
+                    </Stat>
+                  </GridItem>
+                  <GridItem>
+                    <Stat>
+                      <StatLabel fontWeight="medium" color={textColor}>Active Users</StatLabel>
+                      <StatNumber color={accentColor}>{markets.length * 10}</StatNumber>
+                      <StatHelpText>Estimated</StatHelpText>
+                    </Stat>
+                  </GridItem>
+                </Grid>
+                <Box mt={6}>
+                  <Text fontWeight="medium" mb={2}>System Load</Text>
+                  <Progress value={65} colorScheme="green" size="lg" borderRadius="full" />
+                  <Text mt={2} fontSize="sm" color="gray.500">Current server load: 65%</Text>
+                </Box>
+              </Box>
+            </MotionBox>
+
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.8 }}
+            >
+              <Box bg="red.50" borderRadius="2xl" boxShadow="xl" p={6}>
+                <Heading size="lg" color="red.600" mb={4}>Emergency Controls</Heading>
+                <HStack spacing={4}>
+                  <Button
+                    colorScheme="red"
+                    leftIcon={<Icon as={FaExclamationTriangle} />}
+                    onClick={() => toast({
+                      title: "Emergency Shutdown",
+                      description: "This action is not available in the demo.",
+                      status: "warning",
                       duration: 3000,
                       isClosable: true,
-                    })}>
-                      Edit Configuration
-                    </Button>
-                  </VStack>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
-
-            {/* Platform Health Dashboard */}
-            <Box bg="white" borderRadius="lg" boxShadow="md" p={6}>
-              <Heading size="lg" mb={4} color="brand.500">Platform Health</Heading>
-              <Grid templateColumns="repeat(3, 1fr)" gap={6}>
-                <GridItem>
-                  <CircularProgress value={99.99} color="green.400" size="120px">
-                    <CircularProgressLabel>99.99%</CircularProgressLabel>
-                  </CircularProgress>
-                  <Text mt={2} textAlign="center">System Uptime</Text>
-                </GridItem>
-                <GridItem>
-                  <Stat>
-                    <StatLabel>Average Response Time</StatLabel>
-                    <StatNumber>120ms</StatNumber>
-                    <StatHelpText>
-                      <StatArrow type="decrease" />
-                      15% improvement
-                    </StatHelpText>
-                  </Stat>
-                </GridItem>
-                <GridItem>
-                  <Stat>
-                    <StatLabel>Active Users</StatLabel>
-                    <StatNumber>{markets.length * 10}</StatNumber>
-                    <StatHelpText>Estimated</StatHelpText>
-                  </Stat>
-                </GridItem>
-              </Grid>
-              <Box mt={6}>
-                <Heading size="md" mb={2}>System Load</Heading>
-                <Progress value={65} colorScheme="green" size="lg" />
-                <Text mt={2} fontSize="sm" color="gray.600">Current server load: 65%</Text>
+                    })}
+                  >
+                    Emergency Shutdown
+                  </Button>
+                  <Button
+                    colorScheme="yellow"
+                    leftIcon={<Icon as={FaPause} />}
+                    onClick={() => toast({
+                      title: "Pause All Markets",
+                      description: "This action is not available in the demo.",
+                      status: "warning",
+                      duration: 3000,
+                      isClosable: true,
+                    })}
+                  >
+                    Pause All Markets
+                  </Button>
+                  <Button
+                    colorScheme="blue"
+                    leftIcon={<Icon as={FaUsers} />}
+                    onClick={() => toast({
+                      title: "User Lockout",
+                      description: "This action is not available in the demo.",
+                      status: "warning",
+                      duration: 3000,
+                      isClosable: true,
+                    })}
+                  >
+                    Temporary User Lockout
+                  </Button>
+                </HStack>
+                <Text mt={4} fontSize="sm" color="red.600">
+                  Warning: These controls should only be used in emergency situations. All actions are logged and require additional confirmation.
+                </Text>
               </Box>
-            </Box>
-
-            {/* Emergency Controls */}
-            <Box bg="red.50" borderRadius="lg" boxShadow="md" p={6}>
-              <Heading size="lg" mb={4} color="red.600">Emergency Controls</Heading>
-              <HStack spacing={4}>
-                <Button
-                  colorScheme="red"
-                  leftIcon={<Icon as={FaExclamationTriangle} />}
-                  onClick={() => toast({
-                    title: "Emergency Shutdown",
-                    description: "This action is not available in the demo.",
-                    status: "warning",
-                    duration: 3000,
-                    isClosable: true,
-                  })}
-                >
-                  Emergency Shutdown
-                </Button>
-                <Button
-                  colorScheme="yellow"
-                  leftIcon={<Icon as={FaPause} />}
-                  onClick={() => toast({
-                    title: "Pause All Markets",
-                    description: "This action is not available in the demo.",
-                    status: "warning",
-                    duration: 3000,
-                    isClosable: true,
-                  })}
-                >
-                  Pause All Markets
-                </Button>
-                <Button
-                  colorScheme="blue"
-                  leftIcon={<Icon as={FaUsers} />}
-                  onClick={() => toast({
-                    title: "User Lockout",
-                    description: "This action is not available in the demo.",
-                    status: "warning",
-                    duration: 3000,
-                    isClosable: true,
-                  })}
-                >
-                  Temporary User Lockout
-                </Button>
-              </HStack>
-              <Text mt={4} fontSize="sm" color="red.600">
-                Warning: These controls should only be used in emergency situations. All actions are logged and require additional confirmation.
-              </Text>
-            </Box>
+            </MotionBox>
           </VStack>
         </Container>
       </Box>
-
-      {/* Edit Market Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Market</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {selectedMarket && (
-              <VStack spacing={4} align="stretch">
-                <Text><strong>ID:</strong> {selectedMarket.id}</Text>
-                <Text><strong>Question:</strong> {selectedMarket.question}</Text>
-                <Text><strong>Description:</strong> {selectedMarket.description}</Text>
-                <Text><strong>Status:</strong> {selectedMarket.status}</Text>
-                <Text><strong>Start Time:</strong> {new Date(parseInt(selectedMarket.start_time) * 1000).toLocaleString()}</Text>
-                <Text><strong>End Time:</strong> {new Date(parseInt(selectedMarket.end_time) * 1000).toLocaleString()}</Text>
-                <Text><strong>Collateral Amount:</strong> {parseInt(selectedMarket.collateral_amount) / 1000000} {config?.coin_denom}</Text>
-                <Text><strong>Reward Amount:</strong> {parseInt(selectedMarket.reward_amount) / 1000000} {config?.coin_denom}</Text>
-                <Text><strong>Options:</strong></Text>
-                <VStack align="start" pl={4}>
-                  {selectedMarket.options.map((option, index) => (
-                    <Text key={index}>{index + 1}. {option}</Text>
-                  ))}
-                </VStack>
-              </VStack>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={onClose}>
-              Close
-            </Button>
-            <Button variant="ghost" onClick={() => toast({
-              title: "Feature not implemented",
-              description: "Editing markets is not available in this demo.",
-              status: "info",
-              duration: 3000,
-              isClosable: true,
-            })}>Save Changes</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </ChakraProvider>
   );
 };
 
 export default AdminDashboard;
+                    

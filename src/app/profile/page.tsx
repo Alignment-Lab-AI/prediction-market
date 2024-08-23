@@ -38,7 +38,9 @@ import {
   Icon,
   Switch,
   Progress,
-  Input,
+  useColorModeValue,
+  CircularProgress,
+  CircularProgressLabel,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -47,15 +49,23 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  Input,
+  FormControl,
+  FormLabel,
 } from '@chakra-ui/react';
-import { FaWallet, FaChartBar, FaHistory, FaBell, FaUserCog, FaTrophy, FaExchangeAlt, FaUserShield, FaEdit } from 'react-icons/fa';
+import { FaWallet, FaChartBar, FaHistory, FaBell, FaTrophy, FaExchangeAlt, FaUserShield, FaEdit } from 'react-icons/fa';
 import axios from 'axios';
 import NextLink from 'next/link';
+import { motion } from 'framer-motion';
 
 const theme = extendTheme({
   config: {
     initialColorMode: 'light',
     useSystemColorMode: false,
+  },
+  fonts: {
+    heading: '"Poppins", sans-serif',
+    body: '"Poppins", sans-serif',
   },
   colors: {
     brand: {
@@ -66,6 +76,8 @@ const theme = extendTheme({
     },
   },
 });
+
+const MotionBox = motion(Box);
 
 interface UserProfile {
   name: string;
@@ -78,6 +90,7 @@ interface UserProfile {
   level: number;
   xp: number;
   nextLevelXp: number;
+  avatar: string;
 }
 
 interface Bet {
@@ -92,6 +105,69 @@ interface Bet {
   redeemed: boolean;
 }
 
+const EditProfileModal = ({ isOpen, onClose, userProfile, onSave }) => {
+  const [editName, setEditName] = useState(userProfile.name);
+  const [editAvatar, setEditAvatar] = useState(userProfile.avatar);
+
+  const handleSave = () => {
+    onSave({ name: editName, avatar: editAvatar });
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalOverlay backdropFilter="blur(5px)" />
+      <ModalContent borderRadius="xl" bg={useColorModeValue("white", "gray.800")}>
+        <ModalHeader bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text" fontWeight="bold">
+          Edit Profile
+        </ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <VStack spacing={6}>
+            <FormControl>
+              <FormLabel fontWeight="medium">Name</FormLabel>
+              <Input 
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                borderRadius="full"
+                focusBorderColor="blue.400"
+              />
+            </FormControl>
+            <FormControl>
+              <FormLabel fontWeight="medium">Avatar</FormLabel>
+              <Input 
+                type="file"
+                accept="image/*"
+                onChange={(e) => setEditAvatar(e.target.files[0])}
+                p={1}
+              />
+            </FormControl>
+            <HStack width="100%">
+              <Text fontWeight="medium">Wallet:</Text>
+              <Text isTruncated>{userProfile.walletAddress}</Text>
+            </HStack>
+          </VStack>
+        </ModalBody>
+        <ModalFooter>
+          <Button 
+            onClick={handleSave}
+            bgGradient="linear(to-r, blue.400, purple.500)"
+            color="white"
+            _hover={{
+              bgGradient: "linear(to-r, blue.500, purple.600)",
+            }}
+            borderRadius="full"
+            mr={3}
+          >
+            Save Changes
+          </Button>
+          <Button variant="ghost" onClick={onClose} borderRadius="full">Cancel</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
+
 const UserProfilePage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: "Crypto Enthusiast",
@@ -104,6 +180,7 @@ const UserProfilePage = () => {
     level: 1,
     xp: 0,
     nextLevelXp: 100,
+    avatar: "https://bit.ly/broken-link",
   });
   const [bets, setBets] = useState<Bet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,7 +191,13 @@ const UserProfilePage = () => {
   });
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [editName, setEditName] = useState(userProfile.name);
+
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+  const cardBgColor = useColorModeValue("rgba(255, 255, 255, 0.8)", "rgba(26, 32, 44, 0.8)");
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const accentColor = "blue.400";
+  const gradientColor = "linear(to-r, blue.400, purple.500)";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -122,12 +205,11 @@ const UserProfilePage = () => {
         const betsResponse = await axios.get<Bet[]>('http://localhost:3001/api/user-bets/comdex1nh4gxgzq7hw8fvtkxjg4kpfqmsq65szqxxdqye');
         setBets(betsResponse.data);
 
-        // Calculate profile stats based on bets
         const totalBets = betsResponse.data.length;
         const wonBets = betsResponse.data.filter(bet => bet.redeemed).length;
         const lostBets = totalBets - wonBets;
         const winRate = totalBets > 0 ? (wonBets / totalBets) * 100 : 0;
-        const balance = betsResponse.data.reduce((acc, bet) => acc + parseInt(bet.amount), 0) / 1000000; // Convert to UCMDX
+        const balance = betsResponse.data.reduce((acc, bet) => acc + parseInt(bet.amount), 0) / 1000000;
 
         setUserProfile(prev => ({
           ...prev,
@@ -169,12 +251,11 @@ const UserProfilePage = () => {
     });
   };
 
-  const handleEditName = () => {
-    setUserProfile(prev => ({ ...prev, name: editName }));
-    onClose();
+  const handleProfileSave = (updatedProfile) => {
+    setUserProfile(prev => ({ ...prev, ...updatedProfile }));
     toast({
-      title: "Name Updated",
-      description: "Your profile name has been updated successfully.",
+      title: "Profile Updated",
+      description: "Your profile has been successfully updated.",
       status: "success",
       duration: 3000,
       isClosable: true,
@@ -183,185 +264,250 @@ const UserProfilePage = () => {
 
   if (isLoading) {
     return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
-        <Spinner size="xl" color="brand.500" thickness="4px" />
+      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
+        <Spinner size="xl" color={accentColor} thickness="4px" />
       </Box>
     );
   }
 
   return (
     <ChakraProvider theme={theme}>
-      <Box bg="gray.50" minHeight="100vh" py={8}>
+      <Box bg={bgColor} minHeight="100vh" py={12}>
         <Container maxW="container.xl">
-          <VStack spacing={8} align="stretch">
-            <Flex justifyContent="space-between" alignItems="center" bg="white" p={6} borderRadius="lg" boxShadow="md">
-              <HStack spacing={4}>
-                <Avatar size="xl" name={userProfile.name} bg="brand.500">
-                  <AvatarBadge boxSize="1.25em" bg="green.500" />
-                </Avatar>
-                <VStack align="start" spacing={1}>
-                  <Heading size="xl">{userProfile.name}</Heading>
-                  <Text color="gray.500" fontSize="sm">Level {userProfile.level} Predictor</Text>
-                  <HStack>
-                    <Progress value={(userProfile.xp / userProfile.nextLevelXp) * 100} size="sm" width="200px" colorScheme="green" />
-                    <Text fontSize="xs" color="gray.500">
-                      {userProfile.xp}/{userProfile.nextLevelXp} XP
+          <VStack spacing={10} align="stretch">
+            <MotionBox
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Flex 
+                direction={{ base: 'column', md: 'row' }} 
+                justifyContent="space-between" 
+                alignItems="center" 
+                bg={cardBgColor}
+                backdropFilter="blur(10px)"
+                p={8} 
+                borderRadius="2xl" 
+                boxShadow="xl"
+                border="1px solid"
+                borderColor={borderColor}
+              >
+                <HStack spacing={6}>
+                  <Avatar size="2xl" name={userProfile.name} src={userProfile.avatar} bg={accentColor}>
+                    <AvatarBadge boxSize="1.25em" bg="green.500" />
+                  </Avatar>
+                  <VStack align="start" spacing={2}>
+                    <Heading size="2xl" bgGradient={gradientColor} bgClip="text">{userProfile.name}</Heading>
+                    <Text color="gray.500" fontSize="md">Level {userProfile.level} Predictor</Text>
+                    <Text color="gray.500" fontSize="sm" fontStyle="italic" isTruncated maxW="300px">
+                      {userProfile.walletAddress}
                     </Text>
-                  </HStack>
-                </VStack>
-              </HStack>
-              <VStack align="end" spacing={2}>
-                <NextLink href="/admin-dashboard" passHref>
-                  <Button as="a" leftIcon={<Icon as={FaUserShield} />} colorScheme="purple" size="sm">
-                    Admin Dashboard
+                    <HStack spacing={4}>
+                      <CircularProgress value={(userProfile.xp / userProfile.nextLevelXp) * 100} color={accentColor} size="80px" thickness="8px">
+                        <CircularProgressLabel fontWeight="bold">{userProfile.level}</CircularProgressLabel>
+                      </CircularProgress>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm" color="gray.500">Experience</Text>
+                        <Text fontSize="lg" fontWeight="bold" color={textColor}>
+                          {userProfile.xp}/{userProfile.nextLevelXp} XP
+                        </Text>
+                        <Progress value={(userProfile.xp / userProfile.nextLevelXp) * 100} size="sm" width="150px" colorScheme="blue" borderRadius="full" />
+                      </VStack>
+                    </HStack>
+                  </VStack>
+                </HStack>
+                <VStack align="end" spacing={4} mt={{ base: 6, md: 0 }}>
+                  <Button 
+                    leftIcon={<Icon as={FaEdit} />} 
+                    onClick={onOpen} 
+                    bgGradient={gradientColor}
+                    color="white"
+                    _hover={{
+                      bgGradient: "linear(to-r, blue.500, purple.600)",
+                    }}
+                    size="lg" 
+                    borderRadius="full"
+                  >
+                    Edit Profile
                   </Button>
-                </NextLink>
-                <Button leftIcon={<Icon as={FaUserCog} />} colorScheme="brand" size="sm" onClick={onOpen}>
-                  Edit Profile
-                </Button>
-              </VStack>
-            </Flex>
+                  <NextLink href="/admin-dashboard" passHref>
+                    <Button 
+                      as="a" 
+                      leftIcon={<Icon as={FaUserShield} />} 
+                      colorScheme="purple" 
+                      size="lg" 
+                      borderRadius="full"
+                    >
+                      Admin Dashboard
+                    </Button>
+                  </NextLink>
+                </VStack>
+              </Flex>
+            </MotionBox>
 
-            <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={6}>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium">
-                    <HStack spacing={2}>
-                      <Icon as={FaWallet} color="brand.500" />
-                      <Text>Wallet Balance</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl">{userProfile.balance.toFixed(2)} UCMDX</StatNumber>
-                </Stat>
-              </GridItem>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium">
-                    <HStack spacing={2}>
-                      <Icon as={FaChartBar} color="brand.500" />
-                      <Text>Total Bets</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl">{userProfile.totalBets}</StatNumber>
-                </Stat>
-              </GridItem>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium">
-                    <HStack spacing={2}>
-                      <Icon as={FaTrophy} color="brand.500" />
-                      <Text>Win Rate</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl">{userProfile.winRate.toFixed(2)}%</StatNumber>
-                  <StatHelpText>
-                    <StatArrow type={userProfile.winRate > 50 ? 'increase' : 'decrease'} />
-                    {userProfile.wonBets} won / {userProfile.lostBets} lost
-                  </StatHelpText>
-                </Stat>
-              </GridItem>
-              <GridItem>
-                <Stat px={4} py={5} shadow="xl" borderRadius="lg" bg="white">
-                  <StatLabel fontWeight="medium">
-                    <HStack spacing={2}>
-                      <Icon as={FaExchangeAlt} color="brand.500" />
-                      <Text>Profit/Loss</Text>
-                    </HStack>
-                  </StatLabel>
-                  <StatNumber fontSize="3xl" color={userProfile.balance > 0 ? 'green.500' : 'red.500'}>
-                    {userProfile.balance > 0 ? '+' : ''}{userProfile.balance.toFixed(2)} UCMDX
-                  </StatNumber>
-                </Stat>
-              </GridItem>
+            <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={8}>
+              {[
+                { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} UCMDX`, color: 'blue.400' },
+                { label: 'Total Bets', icon: FaChartBar, value: userProfile.totalBets, color: 'purple.500' },
+                { label: 'Win Rate', icon: FaTrophy, value: `${userProfile.winRate.toFixed(2)}%`, color: 'yellow.400', helpText: `${userProfile.wonBets} won / ${userProfile.lostBets} lost` },
+                { label: 'Profit/Loss', icon: FaExchangeAlt, value: `${userProfile.balance > 0 ? '+' : ''}${userProfile.balance.toFixed(2)} UCMDX`, color: userProfile.balance > 0 ? 'green.400' : 'red.400' },
+              ].map((stat, index) => (
+                <MotionBox
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  whileHover={{ y: -5, boxShadow: "2xl" }}
+                >
+                  <Stat 
+                    px={6} 
+                    py={8} 
+                    bg={cardBgColor}
+                    backdropFilter="blur(10px)"
+                    borderRadius="2xl" 
+                    boxShadow="xl"
+                    border="1px solid"
+                    borderColor={borderColor}
+                    height="200px"
+                    position="relative"
+                    overflow="hidden"
+                  >
+                    <Box
+                      position="absolute"
+                      top="-20px"
+                      left="-20px"
+                      width="100px"
+                      height="100px"
+                      bg={`${stat.color}20`}
+                      borderRadius="full"
+                      filter="blur(20px)"
+                    />
+                    <StatLabel fontWeight="medium" color={textColor} fontSize="lg">
+                      <HStack spacing={2}>
+                        <Icon as={stat.icon} color={stat.color} boxSize={6} />
+                        <Text>{stat.label}</Text>
+                      </HStack>
+                    </StatLabel>
+                    <StatNumber fontSize="3xl" fontWeight="bold" color={stat.color} mt={2}>
+                      {stat.value}
+                    </StatNumber>
+                    {stat.helpText && (<StatHelpText mt={2}>
+                        <StatArrow type={userProfile.winRate > 50 ? 'increase' : 'decrease'} />
+                        {stat.helpText}
+                      </StatHelpText>
+                    )}
+                  </Stat>
+                </MotionBox>
+              ))}
             </Grid>
 
-            <Tabs variant="soft-rounded" colorScheme="brand">
-              <TabList bg="white" p={2} borderRadius="lg" boxShadow="sm">
-                <Tab>Betting History</Tab>
-                <Tab>Notification Settings</Tab>
-              </TabList>
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <Tabs variant="soft-rounded" colorScheme="blue" isLazy>
+                <TabList 
+                  bg={cardBgColor}
+                  backdropFilter="blur(10px)"
+                  p={4} 
+                  borderRadius="2xl" 
+                  boxShadow="md"
+                  border="1px solid"
+                  borderColor={borderColor}
+                >
+                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Betting History</Tab>
+                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Notification Settings</Tab>
+                </TabList>
 
-              <TabPanels mt={4}>
-                <TabPanel>
-                  <VStack spacing={4} align="stretch" bg="white" p={6} borderRadius="lg" boxShadow="md">
-                    <Heading size="lg" color="brand.500">Betting History</Heading>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Market ID</Th>
-                          <Th>Amount</Th>
-                          <Th>Odds</Th>
-                          <Th>Position</Th>
-                          <Th>Status</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {bets.map((bet) => (
-                          <Tr key={bet.id}>
-                            <Td>{bet.market_id}</Td>
-                            <Td>{parseInt(bet.amount) / 1000000} UCMDX</Td>
-                            <Td>{bet.odds}</Td>
-                            <Td>{bet.position}</Td>
-                            <Td>
-                              <Badge colorScheme={bet.redeemed ? 'green' : 'yellow'}>
-                                {bet.redeemed ? 'Redeemed' : 'Active'}
-                              </Badge>
-                            </Td>
+                <TabPanels mt={6}>
+                  <TabPanel>
+                    <Box 
+                      bg={cardBgColor}
+                      backdropFilter="blur(10px)"
+                      p={6} 
+                      borderRadius="2xl" 
+                      boxShadow="xl"
+                      border="1px solid"
+                      borderColor={borderColor}
+                    >
+                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Betting History</Heading>
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>Market ID</Th>
+                            <Th>Amount</Th>
+                            <Th>Odds</Th>
+                            <Th>Position</Th>
+                            <Th>Status</Th>
                           </Tr>
+                        </Thead>
+                        <Tbody>
+                          {bets.map((bet) => (
+                            <Tr key={bet.id}>
+                              <Td>{bet.market_id}</Td>
+                              <Td>{(parseInt(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
+                              <Td>{bet.odds}</Td>
+                              <Td>{bet.position}</Td>
+                              <Td>
+                                <Badge 
+                                  colorScheme={bet.redeemed ? 'green' : 'yellow'} 
+                                  borderRadius="full" 
+                                  px={3} 
+                                  py={1}
+                                  textTransform="capitalize"
+                                >
+                                  {bet.redeemed ? 'Redeemed' : 'Active'}
+                                </Badge>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </TabPanel>
+                  <TabPanel>
+                    <Box 
+                      bg={cardBgColor}
+                      backdropFilter="blur(10px)"
+                      p={6} 
+                      borderRadius="2xl" 
+                      boxShadow="xl"
+                      border="1px solid"
+                      borderColor={borderColor}
+                    >
+                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Notification Settings</Heading>
+                      <VStack spacing={6} align="stretch">
+                        {['email', 'push', 'sms'].map((type) => (
+                          <Flex key={type} justifyContent="space-between" alignItems="center">
+                            <HStack spacing={4}>
+                              <Icon as={FaBell} color={accentColor} boxSize={6} />
+                              <Text fontSize="lg" fontWeight="medium">{type.charAt(0).toUpperCase() + type.slice(1)} Notifications</Text>
+                            </HStack>
+                            <Switch
+                              size="lg"
+                              isChecked={notificationSettings[type]}
+                              onChange={() => handleNotificationToggle(type as 'email' | 'push' | 'sms')}
+                              colorScheme="blue"
+                            />
+                          </Flex>
                         ))}
-                      </Tbody>
-                    </Table>
-                  </VStack>
-                </TabPanel>
-                <TabPanel>
-                  <VStack spacing={4} align="stretch" bg="white" p={6} borderRadius="lg" boxShadow="md">
-                    <Heading size="lg" color="brand.500">Notification Settings</Heading>
-                    <HStack justifyContent="space-between">
-                      <Text>Email Notifications</Text>
-                      <Switch isChecked={notificationSettings.email} onChange={() => handleNotificationToggle('email')} colorScheme="brand" />
-                    </HStack>
-                    <HStack justifyContent="space-between">
-                      <Text>Push Notifications</Text>
-                      <Switch isChecked={notificationSettings.push} onChange={() => handleNotificationToggle('push')} colorScheme="brand" />
-                    </HStack>
-                    <HStack justifyContent="space-between">
-                      <Text>SMS Notifications</Text>
-                      <Switch isChecked={notificationSettings.sms} onChange={() => handleNotificationToggle('sms')} colorScheme="brand" />
-                    </HStack>
-                  </VStack>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
+                      </VStack>
+                    </Box>
+                  </TabPanel>
+                </TabPanels>
+              </Tabs>
+            </MotionBox>
           </VStack>
         </Container>
       </Box>
 
-      {/* Edit Profile Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Profile</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={4}>
-              <HStack width="100%">
-                <Text fontWeight="bold" width="100px">Name:</Text>
-                <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
-              </HStack>
-              <HStack width="100%">
-                <Text fontWeight="bold" width="100px">Wallet:</Text>
-                <Text>{userProfile.walletAddress}</Text>
-              </HStack>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="brand" mr={3} onClick={handleEditName}>
-              Save Changes
-            </Button>
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <EditProfileModal 
+        isOpen={isOpen} 
+        onClose={onClose} 
+        userProfile={userProfile}
+        onSave={handleProfileSave}
+      />
     </ChakraProvider>
   );
 };

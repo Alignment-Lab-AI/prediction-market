@@ -36,26 +36,32 @@ import {
   Grid,
   GridItem,
   Icon,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
   Progress,
   Tooltip,
+  useColorModeValue,
+  CircularProgress,
+  CircularProgressLabel,
 } from '@chakra-ui/react';
-import { FaCoins, FaTrophy, FaTimesCircle, FaHistory, FaChartLine, FaExchangeAlt, FaFire, FaStar } from 'react-icons/fa';
+import { FaCoins, FaTrophy, FaHistory, FaChartLine, FaExchangeAlt, FaStar, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
 const theme = extendTheme({
   config: {
     initialColorMode: 'light',
     useSystemColorMode: false,
   },
+  colors: {
+    brand: {
+      50: '#E6FFFA',
+      100: '#B2F5EA',
+      500: '#319795',
+      900: '#234E52',
+    },
+  },
 });
+
+const MotionBox = motion(Box);
 
 interface Bet {
   id: number;
@@ -90,7 +96,11 @@ const MyBetsPage = () => {
   const [markets, setMarkets] = useState<{ [key: number]: Market }>({});
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const cardBgColor = useColorModeValue('white', 'gray.800');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -154,7 +164,7 @@ const MyBetsPage = () => {
 
   if (isLoading) {
     return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
         <Spinner size="xl" color="blue.500" thickness="4px" />
       </Box>
     );
@@ -162,35 +172,40 @@ const MyBetsPage = () => {
 
   return (
     <ChakraProvider theme={theme}>
-      <Box bg="gray.50" minHeight="100vh" py={8}>
+      <Box bg={bgColor} minHeight="100vh" py={8}>
         <Container maxW="container.xl">
           <VStack spacing={8} align="stretch">
             {/* User Profile Header */}
-            <Flex direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" bg="white" p={6} borderRadius="lg" boxShadow="md">
-              <HStack spacing={4}>
-                <Avatar size="xl" name={userProfile.name} src={userProfile.avatar}>
-                  <AvatarBadge boxSize="1.25em" bg="green.500" />
-                </Avatar>
-                <VStack align="start" spacing={1}>
-                  <Heading size="xl">{userProfile.name}</Heading>
-                  <Text color="gray.500" fontSize="sm">{userProfile.walletAddress}</Text>
-                  <Text color="gray.500" fontSize="sm">Joined {userProfile.joinDate}</Text>
-                  <HStack>
-                    <Badge colorScheme="purple">Level {userProfile.level}</Badge>
-                    <Icon as={FaStar} color="yellow.400" />
-                    <Icon as={FaStar} color="yellow.400" />
-                    <Icon as={FaStar} color="yellow.400" />
-                  </HStack>
+            <MotionBox
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Flex direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" bg={cardBgColor} p={6} borderRadius="lg" boxShadow="xl">
+                <HStack spacing={4}>
+                  <Avatar size="xl" name={userProfile.name} src={userProfile.avatar}>
+                    <AvatarBadge boxSize="1.25em" bg="green.500" />
+                  </Avatar>
+                  <VStack align="start" spacing={1}>
+                    <Heading size="xl" color={textColor}>{userProfile.name}</Heading>
+                    <Text color="gray.500" fontSize="sm">{userProfile.walletAddress}</Text>
+                    <Text color="gray.500" fontSize="sm">Joined {userProfile.joinDate}</Text>
+                    <HStack>
+                      <Badge colorScheme="purple">Level {userProfile.level}</Badge>
+                      {[...Array(3)].map((_, i) => (
+                        <Icon key={i} as={FaStar} color="yellow.400" />
+                      ))}
+                    </HStack>
+                  </VStack>
+                </HStack>
+                <VStack align="end" spacing={2}>
+                  <CircularProgress value={(userProfile.xp / userProfile.nextLevelXp) * 100} color="green.400" size="100px">
+                    <CircularProgressLabel>{userProfile.level}</CircularProgressLabel>
+                  </CircularProgress>
+                  <Text fontSize="sm" color="gray.500">XP: {userProfile.xp} / {userProfile.nextLevelXp}</Text>
                 </VStack>
-              </HStack>
-              <VStack align="end" spacing={2}>
-                <Button colorScheme="blue" size="lg" leftIcon={<FaFire />} onClick={onOpen}>
-                  Edit profile
-                </Button>
-                <Progress value={(userProfile.xp / userProfile.nextLevelXp) * 100} size="sm" width="200px" colorScheme="green" />
-                <Text fontSize="sm" color="gray.500">XP: {userProfile.xp} / {userProfile.nextLevelXp}</Text>
-              </VStack>
-            </Flex>
+              </Flex>
+            </MotionBox>
 
             {/* Statistics Grid */}
             <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={6}>
@@ -200,15 +215,20 @@ const MyBetsPage = () => {
                 { label: 'Volume traded', icon: FaCoins, value: `$${(currentBalance / 1000000).toFixed(2)}`, color: 'yellow.500' },
                 { label: 'Markets traded', icon: FaHistory, value: Object.keys(markets).length, color: 'purple.500' },
               ].map((stat, index) => (
-                <GridItem key={index}>
-                  <Stat px={4} py={5} height="150px" shadow="xl" border="1px solid" borderColor="gray.200" rounded="lg" bg="white">
-                    <StatLabel fontWeight="medium" isTruncated>
+                <MotionBox
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                >
+                  <Stat px={4} py={5} height="150px" shadow="xl" border="1px solid" borderColor={borderColor} rounded="lg" bg={cardBgColor}>
+                    <StatLabel fontWeight="medium" isTruncated color={textColor}>
                       <HStack spacing={2}>
                         <Icon as={stat.icon} color={stat.color} />
                         <Text>{stat.label}</Text>
                       </HStack>
                     </StatLabel>
-                    <StatNumber fontSize="2xl" fontWeight="medium">
+                    <StatNumber fontSize="2xl" fontWeight="medium" color={stat.color}>
                       {typeof stat.value === 'number' ? stat.value : stat.value}
                     </StatNumber>
                     {stat.percentage && (
@@ -218,110 +238,103 @@ const MyBetsPage = () => {
                       </StatHelpText>
                     )}
                   </Stat>
-                </GridItem>
+                </MotionBox>
               ))}
             </Grid>
 
             {/* Bets Tabs */}
-            <Tabs variant="enclosed" colorScheme="blue" bg="white" borderRadius="lg" boxShadow="md">
-              <TabList>
-                <Tab>Active Bets</Tab>
-                <Tab>Past Bets</Tab>
-              </TabList>
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <Tabs variant="soft-rounded" colorScheme="blue" bg={cardBgColor} borderRadius="lg" boxShadow="xl" p={4}>
+                <TabList mb={4}>
+                  <Tab>Active Bets</Tab>
+                  <Tab>Past Bets</Tab>
+                </TabList>
 
-              <TabPanels>
-                <TabPanel>
-                  <Table variant="simple">
-                    <Thead>
-                      <Tr>
-                        <Th>Market</Th>
-                        <Th>Amount</Th>
-                        <Th>Odds</Th>
-                        <Th>Potential Winnings</Th>
-                        <Th>Action</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {activeBets.map((bet) => (
-                        <Tr key={bet.id}>
-                          <Td>{markets[bet.market_id]?.question}</Td>
-                          <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
-                          <Td>{bet.odds}</Td>
-                          <Td>{((parseFloat(bet.amount) / 1000000) * parseFloat(bet.odds)).toFixed(2)} UCMDX</Td>
-                          <Td>
-                            <HStack spacing={2}>
-                              <Button colorScheme="red" size="sm" onClick={() => cancelBet(bet.id)}>
-                                Cancel
-                              </Button>
-                              <Tooltip label={markets[bet.market_id]?.status === 'Settled' ? 'Redeem your winnings!' : 'Market not yet settled'}>
-                                <Button
-                                  colorScheme="green"
-                                  size="sm"
-                                  onClick={() => redeemBet(bet.id)}
-                                  isDisabled={markets[bet.market_id]?.status !== 'Settled'}
-                                  opacity={markets[bet.market_id]?.status === 'Settled' ? 1 : 0.5}
-                                >
-                                  Redeem
-                                </Button>
-                              </Tooltip>
-                            </HStack>
-                          </Td>
+                <TabPanels>
+                  <TabPanel>
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Market</Th>
+                          <Th>Amount</Th>
+                          <Th>Odds</Th>
+                          <Th>Potential Winnings</Th>
+                          <Th>Action</Th>
                         </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </TabPanel>
+                      </Thead>
+                      <Tbody>
+                        {activeBets.map((bet) => (
+                          <Tr key={bet.id}>
+                            <Td>{markets[bet.market_id]?.question}</Td>
+                            <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
+                            <Td>{bet.odds}</Td>
+                            <Td>{((parseFloat(bet.amount) / 1000000) * parseFloat(bet.odds)).toFixed(2)} UCMDX</Td>
+                            <Td>
+                              <HStack spacing={2}>
+                                <Tooltip label="Cancel this bet">
+                                  <Button colorScheme="red" size="sm" onClick={() => cancelBet(bet.id)}>
+                                    <Icon as={FaTimesCircle} mr={2} />
+                                    Cancel
+                                  </Button>
+                                </Tooltip>
+                                <Tooltip label={markets[bet.market_id]?.status === 'Settled' ? 'Redeem your winnings!' : 'Market not yet settled'}>
+                                  <Button
+                                    colorScheme="green"
+                                    size="sm"
+                                    onClick={() => redeemBet(bet.id)}
+                                    isDisabled={markets[bet.market_id]?.status !== 'Settled'}
+                                    opacity={markets[bet.market_id]?.status === 'Settled' ? 1 : 0.5}
+                                  >
+                                    <Icon as={FaCheckCircle} mr={2} />
+                                    Redeem
+                                  </Button>
+                                </Tooltip>
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </TabPanel>
 
-                <TabPanel>
-                  <Table variant="simple">
-                    <Thead>
-                      <Tr>
-                        <Th>Market</Th>
-                        <Th>Amount</Th>
-                        <Th>Odds</Th>
-                        <Th>Outcome</Th>
-                        <Th>Winnings</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {pastBets.map((bet) => (
-                        <Tr key={bet.id}>
-                          <Td>{markets[bet.market_id]?.question}</Td>
-                          <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
-                          <Td>{bet.odds}</Td>
-                          <Td>
-                            <Badge colorScheme={bet.redeemed ? 'green' : 'red'}>
-                              {bet.redeemed ? 'Won' : 'Lost'}
-                            </Badge>
-                          </Td>
-                          <Td>{bet.redeemed ? ((parseFloat(bet.amount) / 1000000) * parseFloat(bet.odds)).toFixed(2) : '0'} UCMDX</Td>
+                  <TabPanel>
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Market</Th>
+                          <Th>Amount</Th>
+                          <Th>Odds</Th>
+                          <Th>Outcome</Th>
+                          <Th>Winnings</Th>
                         </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
+                      </Thead>
+                      <Tbody>
+                        {pastBets.map((bet) => (
+                          <Tr key={bet.id}>
+                            <Td>{markets[bet.market_id]?.question}</Td>
+                            <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
+                            <Td>{bet.odds}</Td>
+                            <Td>
+                              <Badge colorScheme={bet.redeemed ? 'green' : 'red'}>
+                                {bet.redeemed ? 'Won' : 'Lost'}
+                              </Badge>
+                            </Td>
+                            <Td>{bet.redeemed ? ((parseFloat(bet.amount) / 1000000) * parseFloat(bet.odds)).toFixed(2) : '0'} UCMDX</Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </TabPanel>
+                </TabPanels>
+              </Tabs>
+            </MotionBox>
           </VStack>
         </Container>
       </Box>
-
-      {/* Edit Profile Modal */}
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Profile</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Text>This feature is not yet implemented. In a real application, you would be able to edit your profile details here.</Text>
-          </ModalBody>
-          <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={onClose}>
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </ChakraProvider>
   );
 };

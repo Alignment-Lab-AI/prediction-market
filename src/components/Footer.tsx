@@ -13,26 +13,43 @@ import {
   VStack,
   HStack,
   Heading,
-  Divider,
+  Flex,
   useColorModeValue,
 } from '@chakra-ui/react';
 import { FaTwitter, FaFacebook, FaLinkedin, FaGithub } from 'react-icons/fa';
 import { EmailIcon } from '@chakra-ui/icons';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion(Box);
 
 const ListHeader = ({ children }) => {
   return (
-    <Text fontWeight={'500'} fontSize={'lg'} mb={2}>
+    <Text fontWeight={'600'} fontSize={'lg'} mb={2} color={useColorModeValue('gray.700', 'gray.200')}>
       {children}
     </Text>
+  );
+};
+
+const FooterLink = ({ children, href }) => {
+  return (
+    <Box as="a" href={href} _hover={{ color: useColorModeValue('blue.500', 'blue.200') }}>
+      <Text fontSize="sm" fontWeight="medium">
+        {children}
+      </Text>
+    </Box>
   );
 };
 
 export default function Footer() {
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const iconBgColor = useColorModeValue('gray.100', 'gray.700');
 
   return (
-    <Box
+    <MotionBox
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
       bg={bgColor}
       color={useColorModeValue('gray.700', 'gray.200')}
       borderTop={1}
@@ -42,69 +59,51 @@ export default function Footer() {
       <Container as={Stack} maxW={'6xl'} py={10}>
         <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={8}>
           <Stack align={'flex-start'}>
-            <ListHeader>Company</ListHeader>
-            <Box as="a" href={'#'}>
-              About Us
-            </Box>
-            <Box as="a" href={'#'}>
-              Blog
-            </Box>
-            <Box as="a" href={'#'}>
-              Careers
-            </Box>
-            <Box as="a" href={'#'}>
-              Contact Us
-            </Box>
+            <ListHeader>PredictX</ListHeader>
+            <FooterLink href={'#'}>About Us</FooterLink>
+            <FooterLink href={'#'}>Blog</FooterLink>
+            <FooterLink href={'#'}>Careers</FooterLink>
+            <FooterLink href={'#'}>Contact Us</FooterLink>
           </Stack>
 
           <Stack align={'flex-start'}>
             <ListHeader>Support</ListHeader>
-            <Box as="a" href={'#'}>
-              Help Center
-            </Box>
-            <Box as="a" href={'#'}>
-              Safety Center
-            </Box>
-            <Box as="a" href={'#'}>
-              Community Guidelines
-            </Box>
+            <FooterLink href={'#'}>Help Center</FooterLink>
+            <FooterLink href={'#'}>Safety Center</FooterLink>
+            <FooterLink href={'#'}>Community Guidelines</FooterLink>
           </Stack>
 
           <Stack align={'flex-start'}>
             <ListHeader>Legal</ListHeader>
-            <Box as="a" href={'#'}>
-              Terms of Service
-            </Box>
-            <Box as="a" href={'#'}>
-              Privacy Policy
-            </Box>
-            <Box as="a" href={'#'}>
-              Cookie Policy
-            </Box>
-            <Box as="a" href={'#'}>
-              FAQ
-            </Box>
+            <FooterLink href={'#'}>Terms of Service</FooterLink>
+            <FooterLink href={'#'}>Privacy Policy</FooterLink>
+            <FooterLink href={'#'}>Cookie Policy</FooterLink>
+            <FooterLink href={'#'}>FAQ</FooterLink>
           </Stack>
 
           <Stack align={'flex-start'}>
-            <ListHeader>Stay up to date</ListHeader>
+            <ListHeader>Stay Connected</ListHeader>
             <Stack direction={'row'}>
               <Input
                 placeholder={'Your email address'}
-                bg={useColorModeValue('blackAlpha.100', 'whiteAlpha.100')}
-                border={0}
+                bg={useColorModeValue('white', 'gray.800')}
+                border={1}
+                borderColor={useColorModeValue('gray.300', 'gray.700')}
                 _focus={{
                   bg: 'whiteAlpha.300',
+                  borderColor: useColorModeValue('blue.500', 'blue.200'),
                 }}
+                borderRadius="full"
               />
               <IconButton
                 bg={useColorModeValue('blue.400', 'blue.800')}
-                color={useColorModeValue('white', 'gray.800')}
+                color={'white'}
                 _hover={{
-                  bg: 'blue.600',
+                  bg: useColorModeValue('blue.500', 'blue.600'),
                 }}
                 aria-label="Subscribe"
                 icon={<EmailIcon />}
+                borderRadius="full"
               />
             </Stack>
           </Stack>
@@ -125,15 +124,31 @@ export default function Footer() {
           justify={{ md: 'space-between' }}
           align={{ md: 'center' }}
         >
-          <Text>© 2023 Prediction Market. All rights reserved</Text>
+          <Text fontSize="sm">© 2024 PredictX. All rights reserved</Text>
           <Stack direction={'row'} spacing={6}>
-            <IconButton aria-label="Twitter" icon={<FaTwitter />} size="sm" />
-            <IconButton aria-label="Facebook" icon={<FaFacebook />} size="sm" />
-            <IconButton aria-label="LinkedIn" icon={<FaLinkedin />} size="sm" />
-            <IconButton aria-label="GitHub" icon={<FaGithub />} size="sm" />
+            {[FaTwitter, FaFacebook, FaLinkedin, FaGithub].map((icon, index) => (
+              <MotionBox
+                key={index}
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <IconButton
+                  aria-label={icon.name}
+                  icon={<Box as={icon} />}
+                  size="sm"
+                  bg={iconBgColor}
+                  color={useColorModeValue('gray.600', 'gray.400')}
+                  _hover={{
+                    bg: useColorModeValue('gray.200', 'gray.600'),
+                    color: useColorModeValue('gray.800', 'white'),
+                  }}
+                  borderRadius="full"
+                />
+              </MotionBox>
+            ))}
           </Stack>
         </Container>
       </Box>
-    </Box>
+    </MotionBox>
   );
 }

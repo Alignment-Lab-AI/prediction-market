@@ -132,29 +132,38 @@
   - Contact form for support
 
 
-# Updated Prediction Market Project Directory Structure
+# Prediction Market Project Directory Structure
 
 ```
 prediction-market/
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx          # Root layout
-│   │   ├── page.tsx            # Home page
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── home/
+│   │   │   ├── components/
+│   │   │   │   ├── Hero.tsx
+│   │   │   │   ├── FeaturedMarkets.tsx
+│   │   │   │   ├── Stats.tsx
+│   │   │   │   ├── CallToAction.tsx
+│   │   │   │   ├── WhyUs.tsx
+│   │   │   │   └── LatestPredictions.tsx
+│   │   │   └── page.tsx
 │   │   ├── markets/
-│   │   │   └── page.tsx        # Markets list page
+│   │   │   └── page.tsx
 │   │   ├── market/
 │   │   │   └── [id]/
-│   │   │       └── page.tsx    # Individual market page
+│   │   │       └── page.tsx
 │   │   ├── create-market/
-│   │   │   └── page.tsx        # Create market page
+│   │   │   └── page.tsx
 │   │   ├── my-bets/
-│   │   │   └── page.tsx        # My bets page
+│   │   │   └── page.tsx
 │   │   ├── admin-dashboard/
-│   │   │   └── page.tsx        # Admin dashboard
+│   │   │   └── page.tsx
 │   │   ├── profile/
-│   │   │   └── page.tsx        # User profile page
+│   │   │   └── page.tsx
 │   │   └── faq/
-│   │       └── page.tsx        # FAQ page
+│   │       └── page.tsx
 │   ├── components/
 │   │   ├── Header.tsx
 │   │   └── Footer.tsx
@@ -166,7 +175,8 @@ prediction-market/
 │   │   ├── useMarkets.ts
 │   │   └── useBets.ts
 │   └── contexts/
-│       └── Web3Context.tsx
+│       ├── Web3Context.tsx
+│       └── GlobalContext.tsx
 ├── public/
 ├── package.json
 └── tsconfig.json
