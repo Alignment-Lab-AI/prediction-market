@@ -45,6 +45,7 @@ import { motion } from 'framer-motion';
 import { getRealConfig, getWhitelistedAddresses } from '../../utils/api';
 import { broadcastTransaction, connectKeplr } from '../../utils/web3';
 import { DeliverTxResponse } from "@cosmjs/stargate";
+import { useWeb3 } from '../../contexts/Web3Context'; 
 
 const theme = extendTheme({
   fonts: {
@@ -93,7 +94,8 @@ const AdminDashboard = () => {
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const accentColor = "blue.400";
   const gradientColor = "linear(to-r, blue.400, purple.500)";
-
+  const { isWalletConnected } = useWeb3(); // Use the useWeb3 hook
+  
   const fetchWhitelistedAddresses = async () => {
     try {
       const addresses = await getWhitelistedAddresses();
@@ -139,6 +141,16 @@ const AdminDashboard = () => {
   }, [toast]);
 
   const handleAddToWhitelist = async () => {
+    if (!isWalletConnected) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet to perform this action.",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
       if (!chainId) {
@@ -208,6 +220,16 @@ const AdminDashboard = () => {
   };
 
   const handleRemoveFromWhitelist = async (address: string) => {
+    if (!isWalletConnected) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet to perform this action.",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
       if (!chainId) {

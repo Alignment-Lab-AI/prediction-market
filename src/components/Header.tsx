@@ -25,22 +25,29 @@ import {
   IconButton,
   Icon,
   useToast,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  VStack,
 } from '@chakra-ui/react';
 import { ChevronDownIcon, ChevronRightIcon, SearchIcon, HamburgerIcon, CopyIcon } from '@chakra-ui/icons';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWeb3 } from '../contexts/Web3Context'; // Import the Web3Context hook
+import { useWeb3 } from '../contexts/Web3Context';
 
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
 
 export default function Header() {
-  const { isOpen, onToggle } = useDisclosure();
-  const { isWalletConnected, walletAddress, connectWallet, disconnectWallet } = useWeb3(); // Use the Web3Context
+  const { isOpen, onToggle, onClose } = useDisclosure();
+  const { isWalletConnected, walletAddress, connectWallet, disconnectWallet } = useWeb3();
   const toast = useToast();
 
-  const bgColor = useColorModeValue('rgba(255, 255, 255, 0.8)', 'rgba(26, 32, 44, 0.8)');
-  const borderColor = useColorModeValue('gray.100', 'gray.700');
+  const bgColor = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.9)');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');
 
   const copyAddress = () => {
@@ -83,23 +90,25 @@ export default function Header() {
           maxW="container.xl"
           mx="auto"
         >
-          <Flex flex={{ base: 1 }} justify={{ base: 'center', md: 'start' }} align="center">
-            <MotionFlex
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Text
-                textAlign={useBreakpointValue({ base: 'center', md: 'left' })}
-                fontFamily={'heading'}
-                fontWeight="bold"
-                fontSize="xl"
-                bgGradient="linear(to-r, blue.400, purple.500)"
-                bgClip="text"
+          <Flex flex={{ base: 1 }} justify={{ base: 'start', md: 'start' }} align="center">
+            <Link href="/" passHref>
+              <MotionFlex
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                cursor="pointer"
               >
-                PredictX
-              </Text>
-            </MotionFlex>
+                <Text
+                  fontFamily={'heading'}
+                  fontWeight="bold"
+                  fontSize="2xl"
+                  bgGradient="linear(to-r, blue.400, purple.500)"
+                  bgClip="text"
+                >
+                  PredictX
+                </Text>
+              </MotionFlex>
+            </Link>
 
             <Flex display={{ base: 'none', md: 'flex' }} ml={10}>
               <DesktopNav />
@@ -184,12 +193,29 @@ export default function Header() {
                 </MotionBox>
               )}
             </AnimatePresence>
+
+            <IconButton
+              onClick={onToggle}
+              icon={<HamburgerIcon w={5} h={5} />}
+              variant={'ghost'}
+              aria-label={'Toggle Navigation'}
+              display={{ base: 'flex', md: 'none' }}
+            />
           </Stack>
         </Flex>
 
-        <Collapse in={isOpen} animateOpacity>
-          <MobileNav />
-        </Collapse>
+        <Drawer placement="right" onClose={onClose} isOpen={isOpen}>
+          <DrawerOverlay />
+          <DrawerContent>
+            <DrawerCloseButton />
+            <DrawerHeader>Menu</DrawerHeader>
+            <DrawerBody>
+              <VStack spacing={4} align="stretch">
+                <MobileNav />
+              </VStack>
+            </DrawerBody>
+          </DrawerContent>
+        </Drawer>
       </Box>
       <Box height="60px" />
     </MotionBox>
@@ -342,10 +368,6 @@ interface NavItem {
 }
 
 const NAV_ITEMS: Array<NavItem> = [
-  {
-    label: 'Home',
-    href: '/',
-  },
   {
     label: 'Markets',
     href: '/markets',
