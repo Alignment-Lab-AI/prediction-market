@@ -47,7 +47,7 @@ import {
 import { FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { getRealConfig } from '../../utils/api';
+import { getRealConfig, getWhitelistedAddresses } from '../../utils/api';
 import { broadcastTransaction, connectKeplr } from '../../utils/web3';
 import { DeliverTxResponse } from "@cosmjs/stargate";
 
@@ -102,17 +102,15 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [marketsResponse, whitelistResponse] = await Promise.all([
+        const [marketsResponse, configResponse, whitelistAddresses] = await Promise.all([
           axios.get<Market[]>('http://localhost:3001/api/markets'),
-          axios.get<string[]>('http://localhost:3001/api/whitelisted-addresses'),
+          getRealConfig(),
+          getWhitelistedAddresses(),
         ]);
-        // Fetch real config
-        const configResponse = await getRealConfig();
-        setConfig(configResponse);
 
         setMarkets(marketsResponse.data);
-        setWhitelistedAddresses(whitelistResponse.data);
-        console.log("test")
+        setConfig(configResponse);
+        setWhitelistedAddresses(whitelistAddresses || []);  // Ensure it's an array
       } catch (err) {
         console.error('Error fetching data:', err);
         toast({
@@ -197,21 +195,62 @@ const AdminDashboard = () => {
 
   const handleRemoveFromWhitelist = async (address: string) => {
     try {
-      await axios.post('http://localhost:3001/api/remove-from-whitelist', { address });
-      setWhitelistedAddresses(whitelistedAddresses.filter(a => a !== address));
-      toast({
-        title: "Address Removed",
-        description: `${address} has been removed from the whitelist.`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      if (!chainId) {
+        throw new Error("Chain ID not defined in environment variables");
+      }
+
+      const { accounts } = await connectKeplr(chainId);
+      const senderAddress = accounts[0].address;
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+      if (!contractAddress) {
+        throw new Error("Contract address not defined in environment variables");
+      }
+
+      const msg = {
+        remove_from_whitelist: {
+          address: address
+        }
+      };
+
+      console.log("Contract message:", JSON.stringify(msg, null, 2));
+
+      const message = {
+        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+        value: {
+          sender: senderAddress,
+          contract: contractAddress,
+          msg: Buffer.from(JSON.stringify(msg)).toString('base64'),
+          funds: []
+        }
+      };
+
+      console.log("Full message:", JSON.stringify(message, null, 2));
+
+      const result: DeliverTxResponse = await broadcastTransaction(chainId, [message]);
+
+      console.log("Transaction result:", result);
+
+      if (result.code === 0) {
+        setWhitelistedAddresses(whitelistedAddresses.filter(a => a !== address));
+        toast({
+          title: "Address Removed",
+          description: `${address} has been removed from the whitelist. Transaction hash: ${result.transactionHash}`,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error(`Transaction failed with code ${result.code}: ${result.rawLog}`);
+      }
     } catch (err) {
+      console.error("Error removing address from whitelist:", err);
       toast({
         title: "Error",
-        description: "Failed to remove address from whitelist.",
+        description: "Failed to remove address from whitelist. " + (err instanceof Error ? err.message : ""),
         status: "error",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     }
@@ -286,7 +325,7 @@ const AdminDashboard = () => {
               {[
                 { label: 'Total Markets', icon: FaChartLine, value: markets.length, color: 'blue.400' },
                 { label: 'Whitelisted Users', icon: FaUsers, value: whitelistedAddresses.length, color: 'green.400' },
-                { label: 'Platform Fee', icon: FaCoins, value: `${config?.platform_fee}%`, color: 'yellow.400' },
+                { label: 'Platform Fee', icon: FaCoins, value: `${config?.platform_fee/ 100}%`, color: 'yellow.400' },
                 { label: 'Voting Time', icon: FaGavel, value: `${config?.voting_time / 3600}h`, color: 'purple.400' },
               ].map((stat, index) => (
                 <MotionBox

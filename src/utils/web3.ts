@@ -109,6 +109,8 @@
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { GasPrice, calculateFee, StdFee, DeliverTxResponse } from "@cosmjs/stargate";
+import { CosmWasmClient } from "@cosmjs/cosmwasm-stargate";
+
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -176,4 +178,3 @@ export const broadcastTransaction = async (
     );
   };
 
-  
