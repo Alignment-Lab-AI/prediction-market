@@ -47,6 +47,9 @@ import {
 import { FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes, FaCheck } from 'react-icons/fa';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { getRealConfig } from '../../utils/api';
+import { broadcastTransaction, connectKeplr } from '../../utils/web3';
+import { DeliverTxResponse } from "@cosmjs/stargate";
 
 const theme = extendTheme({
   fonts: {
@@ -99,15 +102,17 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [marketsResponse, whitelistResponse, configResponse] = await Promise.all([
+        const [marketsResponse, whitelistResponse] = await Promise.all([
           axios.get<Market[]>('http://localhost:3001/api/markets'),
           axios.get<string[]>('http://localhost:3001/api/whitelisted-addresses'),
-          axios.get<Config>('http://localhost:3001/api/config'),
         ]);
+        // Fetch real config
+        const configResponse = await getRealConfig();
+        setConfig(configResponse);
 
         setMarkets(marketsResponse.data);
         setWhitelistedAddresses(whitelistResponse.data);
-        setConfig(configResponse.data);
+        console.log("test")
       } catch (err) {
         console.error('Error fetching data:', err);
         toast({
@@ -127,22 +132,64 @@ const AdminDashboard = () => {
 
   const handleAddToWhitelist = async () => {
     try {
-      await axios.post('http://localhost:3001/api/add-to-whitelist', { address: newAddress });
-      setWhitelistedAddresses([...whitelistedAddresses, newAddress]);
-      setNewAddress('');
-      toast({
-        title: "Address Whitelisted",
-        description: `${newAddress} has been added to the whitelist.`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      if (!chainId) {
+        throw new Error("Chain ID not defined in environment variables");
+      }
+  
+      const { accounts } = await connectKeplr(chainId);
+      const senderAddress = accounts[0].address;
+  
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+      if (!contractAddress) {
+        throw new Error("Contract address not defined in environment variables");
+      }
+  
+      const msg = {
+        add_to_whitelist: {
+          address: newAddress
+        }
+      };
+  
+      console.log("Contract message:", JSON.stringify(msg, null, 2));
+  
+      const message = {
+        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+        value: {
+          sender: senderAddress,
+          contract: contractAddress,
+          msg: Buffer.from(JSON.stringify(msg)).toString('base64'),
+          funds: []
+        }
+      };
+  
+      console.log("Full message:", JSON.stringify(message, null, 2));
+  
+      const result: DeliverTxResponse = await broadcastTransaction(chainId, [message]);
+  
+      console.log("Transaction result:", result);
+  
+      // Check if the transaction was successful
+      if (result.code === 0) {
+        setWhitelistedAddresses([...whitelistedAddresses, newAddress]);
+        setNewAddress('');
+        toast({
+          title: "Address Whitelisted",
+          description: `${newAddress} has been added to the whitelist. Transaction hash: ${result.transactionHash}`,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error(`Transaction failed with code ${result.code}: ${result.rawLog}`);
+      }
     } catch (err) {
+      console.error("Error adding address to whitelist:", err);
       toast({
         title: "Error",
-        description: "Failed to add address to whitelist.",
+        description: "Failed to add address to whitelist. " + (err instanceof Error ? err.message : ""),
         status: "error",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
     }
