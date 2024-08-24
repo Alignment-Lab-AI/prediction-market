@@ -30,8 +30,6 @@ import {
   Stat,
   StatLabel,
   StatNumber,
-  StatHelpText,
-  StatArrow,
   Grid,
   GridItem,
   Icon,
@@ -39,12 +37,9 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  CircularProgress,
-  CircularProgressLabel,
   Tooltip,
-  Progress,
 } from '@chakra-ui/react';
-import { FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes, FaCheck } from 'react-icons/fa';
+import { FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { getRealConfig, getWhitelistedAddresses } from '../../utils/api';
@@ -99,18 +94,33 @@ const AdminDashboard = () => {
   const accentColor = "blue.400";
   const gradientColor = "linear(to-r, blue.400, purple.500)";
 
+  const fetchWhitelistedAddresses = async () => {
+    try {
+      const addresses = await getWhitelistedAddresses();
+      setWhitelistedAddresses(addresses || []);
+    } catch (error) {
+      console.error('Error fetching whitelisted addresses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch whitelisted addresses.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [marketsResponse, configResponse, whitelistAddresses] = await Promise.all([
+        const [marketsResponse, configResponse] = await Promise.all([
           axios.get<Market[]>('http://localhost:3001/api/markets'),
           getRealConfig(),
-          getWhitelistedAddresses(),
         ]);
 
         setMarkets(marketsResponse.data);
         setConfig(configResponse);
-        setWhitelistedAddresses(whitelistAddresses || []);  // Ensure it's an array
+        await fetchWhitelistedAddresses();
       } catch (err) {
         console.error('Error fetching data:', err);
         toast({
@@ -149,8 +159,6 @@ const AdminDashboard = () => {
         }
       };
   
-      console.log("Contract message:", JSON.stringify(msg, null, 2));
-  
       const message = {
         typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
         value: {
@@ -160,32 +168,38 @@ const AdminDashboard = () => {
           funds: []
         }
       };
+
+      const safeStringify = (obj: any) => {
+        return JSON.stringify(obj, (key, value) =>
+          typeof value === 'bigint'
+            ? value.toString()
+            : value
+        );
+      };
   
-      console.log("Full message:", JSON.stringify(message, null, 2));
+      console.log("Sending transaction to add to whitelist:", safeStringify(message));
   
-      const result: DeliverTxResponse = await broadcastTransaction(chainId, [message]);
+      const result = await broadcastTransaction(chainId, [message]);
   
-      console.log("Transaction result:", result);
+      console.log("Add to whitelist result:", safeStringify(result));
   
-      // Check if the transaction was successful
-      if (result.code === 0) {
-        setWhitelistedAddresses([...whitelistedAddresses, newAddress]);
-        setNewAddress('');
-        toast({
-          title: "Address Whitelisted",
-          description: `${newAddress} has been added to the whitelist. Transaction hash: ${result.transactionHash}`,
-          status: "success",
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        throw new Error(`Transaction failed with code ${result.code}: ${result.rawLog}`);
-      }
+      // Update the UI state immediately
+      setWhitelistedAddresses(prevAddresses => [...prevAddresses, newAddress]);
+      setNewAddress(''); // Clear the input field
+  
+      toast({
+        title: "Address Added",
+        description: `${newAddress} has been added to the whitelist. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+  
     } catch (err) {
       console.error("Error adding address to whitelist:", err);
       toast({
         title: "Error",
-        description: "Failed to add address to whitelist. " + (err instanceof Error ? err.message : ""),
+        description: "Failed to add address to whitelist. " + (err instanceof Error ? err.message : "Unknown error occurred"),
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -199,23 +213,21 @@ const AdminDashboard = () => {
       if (!chainId) {
         throw new Error("Chain ID not defined in environment variables");
       }
-
+  
       const { accounts } = await connectKeplr(chainId);
       const senderAddress = accounts[0].address;
-
+  
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
       if (!contractAddress) {
         throw new Error("Contract address not defined in environment variables");
       }
-
+  
       const msg = {
         remove_from_whitelist: {
           address: address
         }
       };
-
-      console.log("Contract message:", JSON.stringify(msg, null, 2));
-
+  
       const message = {
         typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
         value: {
@@ -226,29 +238,36 @@ const AdminDashboard = () => {
         }
       };
 
-      console.log("Full message:", JSON.stringify(message, null, 2));
-
-      const result: DeliverTxResponse = await broadcastTransaction(chainId, [message]);
-
-      console.log("Transaction result:", result);
-
-      if (result.code === 0) {
-        setWhitelistedAddresses(whitelistedAddresses.filter(a => a !== address));
-        toast({
-          title: "Address Removed",
-          description: `${address} has been removed from the whitelist. Transaction hash: ${result.transactionHash}`,
-          status: "success",
-          duration: 5000,
-          isClosable: true,
-        });
-      } else {
-        throw new Error(`Transaction failed with code ${result.code}: ${result.rawLog}`);
-      }
+      const safeStringify = (obj: any) => {
+        return JSON.stringify(obj, (key, value) =>
+          typeof value === 'bigint'
+            ? value.toString()
+            : value
+        );
+      };
+  
+      console.log("Sending transaction to remove from whitelist:", safeStringify(message));
+  
+      const result = await broadcastTransaction(chainId, [message]);
+  
+      console.log("Remove from whitelist result:", safeStringify(result));
+  
+      // Update the UI state immediately
+      setWhitelistedAddresses(prevAddresses => prevAddresses.filter(a => a !== address));
+      
+      toast({
+        title: "Address Removed",
+        description: `${address} has been removed from the whitelist. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+  
     } catch (err) {
       console.error("Error removing address from whitelist:", err);
       toast({
         title: "Error",
-        description: "Failed to remove address from whitelist. " + (err instanceof Error ? err.message : ""),
+        description: "Failed to remove address from whitelist. " + (err instanceof Error ? err.message : "Unknown error occurred"),
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -538,48 +557,6 @@ const AdminDashboard = () => {
             <MotionBox
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <Box bg={cardBgColor} borderRadius="2xl" boxShadow="xl" p={6}>
-                <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Platform Health</Heading>
-                <Grid templateColumns="repeat(3, 1fr)" gap={6}>
-                  <GridItem>
-                    <VStack>
-                      <CircularProgress value={99.99} color="green.400" size="120px">
-                        <CircularProgressLabel>99.99%</CircularProgressLabel>
-                      </CircularProgress>
-                      <Text mt={2} textAlign="center" fontWeight="medium">System Uptime</Text>
-                    </VStack>
-                  </GridItem>
-                  <GridItem>
-                    <Stat>
-                      <StatLabel fontWeight="medium" color={textColor}>Average Response Time</StatLabel>
-                      <StatNumber color={accentColor}>120ms</StatNumber>
-                      <StatHelpText>
-                        <StatArrow type="decrease" />
-                        15% improvement
-                      </StatHelpText>
-                    </Stat>
-                  </GridItem>
-                  <GridItem>
-                    <Stat>
-                      <StatLabel fontWeight="medium" color={textColor}>Active Users</StatLabel>
-                      <StatNumber color={accentColor}>{markets.length * 10}</StatNumber>
-                      <StatHelpText>Estimated</StatHelpText>
-                    </Stat>
-                  </GridItem>
-                </Grid>
-                <Box mt={6}>
-                  <Text fontWeight="medium" mb={2}>System Load</Text>
-                  <Progress value={65} colorScheme="green" size="lg" borderRadius="full" />
-                  <Text mt={2} fontSize="sm" color="gray.500">Current server load: 65%</Text>
-                </Box>
-              </Box>
-            </MotionBox>
-
-            <MotionBox
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.8 }}
             >
               <Box bg="red.50" borderRadius="2xl" boxShadow="xl" p={6}>
@@ -638,4 +615,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-                    

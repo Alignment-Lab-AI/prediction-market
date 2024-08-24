@@ -136,45 +136,67 @@ export const broadcastTransaction = async (
     messages: any[],
     memo: string = ""
   ): Promise<DeliverTxResponse> => {
-    const { offlineSigner, accounts } = await connectKeplr(chainId);
-    const rpcEndpoint = process.env.NEXT_PUBLIC_RPC_ENDPOINT;
-    if (!rpcEndpoint) {
-      throw new Error("RPC endpoint not defined in environment variables");
-    }
+    try {
+      const { offlineSigner, accounts } = await connectKeplr(chainId);
+      const rpcEndpoint = process.env.NEXT_PUBLIC_RPC_ENDPOINT;
+      if (!rpcEndpoint) {
+        throw new Error("RPC endpoint not defined in environment variables");
+      }
   
-    const gasPrice = GasPrice.fromString('0.025ucmdx');
-    const client = await SigningCosmWasmClient.connectWithSigner(
-      rpcEndpoint,
-      offlineSigner,
-      { gasPrice }
-    );
+      const gasPrice = GasPrice.fromString('0.025ucmdx');
+      const client = await SigningCosmWasmClient.connectWithSigner(
+        rpcEndpoint,
+        offlineSigner,
+        { gasPrice }
+      );
   
-    const { sender, contract, msg, funds } = messages[0].value;
-    const parsedMsg = JSON.parse(Buffer.from(msg, 'base64').toString());
+      const { sender, contract, msg, funds } = messages[0].value;
+      const parsedMsg = JSON.parse(Buffer.from(msg, 'base64').toString());
   
-    // Estimate the gas
-    const gasEstimation = await client.simulate(sender, [{
-      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-      value: {
+      console.log("Executing transaction with message:", safeStringify(parsedMsg));
+  
+      // Estimate the gas
+      const gasEstimation = await client.simulate(sender, [{
+        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+        value: {
+          sender,
+          contract,
+          msg: Buffer.from(JSON.stringify(parsedMsg)),
+          funds,
+        },
+      }], memo);
+  
+      // Calculate the fee with a 1.3 adjustment factor
+      const fee: StdFee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
+  
+      console.log("Estimated fee:", safeStringify(fee));
+  
+      const result = await client.execute(
         sender,
         contract,
-        msg: Buffer.from(JSON.stringify(parsedMsg)),
-        funds,
-      },
-    }], memo);
+        parsedMsg,
+        fee,
+        memo,
+        funds
+      );
   
-    // Calculate the fee with a 1.3 adjustment factor
-    const fee: StdFee = calculateFee(Math.round(gasEstimation * 1.3), gasPrice);
+      console.log("Transaction result:", safeStringify(result));
   
-    console.log("Estimated fee:", fee);
+      if (result.code !== undefined && result.code !== 0) {
+        throw new Error(`Transaction failed with code ${result.code}: ${result.rawLog}`);
+      }
   
-    return client.execute(
-      sender,
-      contract,
-      parsedMsg,
-      fee,
-      memo,
-      funds
-    );
+      return result;
+    } catch (error) {
+      console.error("Error in broadcastTransaction:", error);
+      throw error; // Re-throw the error to be caught by the calling function
+    }
   };
 
+  const safeStringify = (obj: any) => {
+    return JSON.stringify(obj, (key, value) =>
+      typeof value === 'bigint'
+        ? value.toString()
+        : value
+    );
+  };
