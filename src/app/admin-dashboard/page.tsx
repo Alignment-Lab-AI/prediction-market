@@ -39,7 +39,7 @@ import {
   InputLeftElement,
   Tooltip,
 } from '@chakra-ui/react';
-import { FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes } from 'react-icons/fa';
+import { FaCheckCircle, FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { getRealConfig, getWhitelistedAddresses } from '../../utils/api';
@@ -95,6 +95,30 @@ const AdminDashboard = () => {
   const accentColor = "blue.400";
   const gradientColor = "linear(to-r, blue.400, purple.500)";
   const { isWalletConnected } = useWeb3(); // Use the useWeb3 hook
+
+    const fetchMarkets = async () => {
+        console.log("Fetching markets...");
+        try {
+        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+        const GET_ACTIVE_MARKETS_QUERY = process.env.NEXT_PUBLIC_GET_ACTIVE_MARKETS_QUERY;
+
+        const response = await axios.get(
+            `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${GET_ACTIVE_MARKETS_QUERY}`
+        );
+        console.log("Markets fetched successfully:", response.data);
+        setMarkets(response.data.data);
+        } catch (error) {
+        console.error("Error fetching markets:", error.response ? error.response.data : error.message);
+        toast({
+            title: "Error",
+            description: "Failed to fetch markets.",
+            status: "error",
+            duration: 5000,
+            isClosable: true,
+        });
+        }
+    };
   
   const fetchWhitelistedAddresses = async () => {
     try {
@@ -115,14 +139,13 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [marketsResponse, configResponse] = await Promise.all([
-          axios.get<Market[]>('http://localhost:3001/api/markets'),
+        const [configResponse] = await Promise.all([
           getRealConfig(),
+          fetchMarkets(),
+          fetchWhitelistedAddresses(),
         ]);
 
-        setMarkets(marketsResponse.data);
         setConfig(configResponse);
-        await fetchWhitelistedAddresses();
       } catch (err) {
         console.error('Error fetching data:', err);
         toast({
@@ -297,6 +320,17 @@ const AdminDashboard = () => {
     }
   };
 
+    const handleProposeResult = async (marketId: number) => {
+        // Implement the logic to propose a result for a closed market
+        toast({
+        title: "Feature not implemented",
+        description: "Proposing a result is not available in this demo.",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+        });
+    };
+
   const handleMarketAction = async (marketId: number, action: 'pause' | 'close' | 'cancel') => {
     try {
       await axios.post(`http://localhost:3001/api/market-action`, { marketId, action });
@@ -424,65 +458,62 @@ const AdminDashboard = () => {
                 </TabList>
 
                 <TabPanels mt={6}>
-                  <TabPanel>
+                <TabPanel>
                     <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
-                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Market Management</Heading>
-                      <HStack mb={4}>
+                    <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Market Management</Heading>
+                    <HStack mb={4}>
                         <InputGroup>
-                          <InputLeftElement pointerEvents="none">
+                        <InputLeftElement pointerEvents="none">
                             <Icon as={FaSearch} color="gray.300" />
-                          </InputLeftElement>
-                          <Input placeholder="Search markets" onChange={(e) => setFilter(e.target.value)} />
+                        </InputLeftElement>
+                        <Input placeholder="Search markets" onChange={(e) => setFilter(e.target.value)} />
                         </InputGroup>
                         <Button onClick={() => setFilter('All')}>All</Button>
                         <Button onClick={() => setFilter('Active')}>Active</Button>
-                        <Button onClick={() => setFilter('Paused')}>Paused</Button>
                         <Button onClick={() => setFilter('Closed')}>Closed</Button>
-                      </HStack>
-                      <Table variant="simple">
+                    </HStack>
+                    <Table variant="simple">
                         <Thead>
-                          <Tr>
+                        <Tr>
                             <Th>ID</Th>
                             <Th>Question</Th>
                             <Th>Status</Th>
                             <Th>Actions</Th>
-                          </Tr>
+                        </Tr>
                         </Thead>
                         <Tbody>
-                          {filteredMarkets.map((market) => (
+                        {filteredMarkets.map((market) => (
                             <Tr key={market.id}>
-                              <Td>{market.id}</Td>
-                              <Td>{market.question}</Td>
-                              <Td>
+                            <Td>{market.id}</Td>
+                            <Td>{market.question}</Td>
+                            <Td>
                                 <Badge colorScheme={market.status === 'Active' ? 'green' : 'yellow'}>
-                                  {market.status}
+                                {market.status}
                                 </Badge>
-                              </Td>
-                              <Td>
-                                <HStack spacing={2}>
-                                  <Tooltip label="Pause">
-                                    <Button size="sm" colorScheme="yellow" onClick={() => handleMarketAction(market.id, 'pause')}>
-                                      <Icon as={FaPause} />
-                                    </Button>
-                                  </Tooltip>
-                                  <Tooltip label="Close">
-                                    <Button size="sm" colorScheme="red" onClick={() => handleMarketAction(market.id, 'close')}>
-                                      <Icon as={FaTimes} />
-                                    </Button>
-                                  </Tooltip>
-                                  <Tooltip label="Cancel">
-                                    <Button size="sm" colorScheme="purple" onClick={() => handleMarketAction(market.id, 'cancel')}>
-                                      <Icon as={FaTimes} />
-                                    </Button>
-                                  </Tooltip>
-                                </HStack>
-                              </Td>
+                            </Td>
+                            <Td>
+                                <Tooltip label={market.status !== 'Closed' ? "Market must be closed to propose result" : "Propose Result"}>
+                                <Button
+                                    size="sm"
+                                    colorScheme="blue"
+                                    onClick={() => handleProposeResult(market.id)}
+                                    isDisabled={market.status !== 'Closed'}
+                                    opacity={market.status !== 'Closed' ? 0.5 : 1}
+                                    _hover={{
+                                    opacity: market.status !== 'Closed' ? 0.5 : 0.8
+                                    }}
+                                >
+                                    <Icon as={FaCheckCircle} mr={2} />
+                                    Propose Result
+                                </Button>
+                                </Tooltip>
+                            </Td>
                             </Tr>
-                          ))}
+                        ))}
                         </Tbody>
-                      </Table>
+                    </Table>
                     </Box>
-                  </TabPanel>
+                </TabPanel>
                   <TabPanel>
                     <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
                       <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Whitelist Management</Heading>

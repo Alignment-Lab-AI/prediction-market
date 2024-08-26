@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -29,14 +29,29 @@ import {
   InputLeftElement,
   InputRightElement,
   useColorModeValue,
-  Badge,  Divider,
+  Badge,
+  Divider,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Slider,
+  SliderTrack,
+  SliderFilledTrack,
+  SliderThumb,
+  Select,
 } from '@chakra-ui/react';
-import { AddIcon, DeleteIcon, ChevronRightIcon, ChevronLeftIcon } from '@chakra-ui/icons';
+import { AddIcon, DeleteIcon, ChevronRightIcon, ChevronLeftIcon, TimeIcon } from '@chakra-ui/icons';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { FiHelpCircle, FiList, FiCalendar, FiClock, FiDollarSign, FiCheckCircle } from 'react-icons/fi';
+import { FiHelpCircle, FiList, FiCalendar, FiClock, FiDollarSign, FiCheckCircle, FiAlertTriangle } from 'react-icons/fi';
 import { SingleDatepicker } from 'chakra-dayzed-datepicker';
+import { useWeb3 } from '../../contexts/Web3Context';
+import { broadcastTransaction } from '../../utils/web3';
 
 const MotionBox = motion(Box);
 
@@ -44,8 +59,10 @@ interface MarketForm {
   question: string;
   description: string;
   options: { value: string }[];
-  startTime: Date;
-  endTime: Date;
+  startDate: Date;
+  startTime: string;
+  endDate: Date;
+  endTime: string;
   collateralAmount: number;
   rewardAmount: number;
 }
@@ -61,13 +78,18 @@ const steps = [
 const CreateMarketPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isWhitelisted, setIsWhitelisted] = useState(false);
   const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isWalletConnected, walletAddress } = useWeb3();
 
   const { register, control, handleSubmit, watch, formState: { errors } } = useForm<MarketForm>({
     defaultValues: {
       options: [{ value: '' }, { value: '' }],
-      startTime: new Date(),
-      endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      startDate: new Date(),
+      startTime: '12:00',
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      endTime: '12:00',
     }
   });
 
@@ -78,26 +100,96 @@ const CreateMarketPage = () => {
 
   const watchedFields = watch();
 
+  useEffect(() => {
+    const checkWhitelist = async () => {
+      if (isWalletConnected && walletAddress) {
+        // Replace this with actual API call to check whitelist status
+        const whitelistStatus = await checkWhitelistStatus(walletAddress);
+        setIsWhitelisted(whitelistStatus);
+      }
+    };
+    checkWhitelist();
+  }, [isWalletConnected, walletAddress]);
+
+  const checkWhitelistStatus = async (address: string): Promise<boolean> => {
+    // Replace this with actual API call to check whitelist status
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(Math.random() > 0.5), 1000);
+    });
+  };
+
   const onSubmit = async (data: MarketForm) => {
-    setIsSubmitting(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+    if (!isWalletConnected) {
       toast({
-        title: "Market created!",
-        description: "Your new market has been successfully launched.",
-        status: "success",
-        duration: 5000,
+        title: "Wallet not connected",
+        description: "Please connect your wallet to create a market.",
+        status: "warning",
+        duration: 3000,
         isClosable: true,
       });
+      return;
+    }
+  
+    if (!isWhitelisted) {
+      onOpen(); // Open the modal for non-whitelisted users
+      return;
+    }
+  
+    setIsSubmitting(true);
+    try {
+      const startTimestamp = Math.floor(new Date(`${data.startDate.toDateString()} ${data.startTime}`).getTime() / 1000);
+      const endTimestamp = Math.floor(new Date(`${data.endDate.toDateString()} ${data.endTime}`).getTime() / 1000);
+  
+      const createMarketMsg = {
+        create_market: {
+          question: data.question,
+          description: data.description,
+          options: data.options.map(o => o.value),
+          start_time: startTimestamp.toString(),
+          end_time: endTimestamp.toString(),
+          collateral_amount: (data.collateralAmount * 1000000).toString(),
+          reward_amount: (data.rewardAmount * 1000000).toString(),
+        }
+      };
+  
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+      if (!contractAddress) {
+        throw new Error("Contract address not defined");
+      }
+  
+      const result = await broadcastTransaction(process.env.NEXT_PUBLIC_CHAIN_ID!, [{
+        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+        value: {
+          sender: walletAddress,
+          contract: contractAddress,
+          msg: Buffer.from(JSON.stringify(createMarketMsg)).toString('base64'),
+          funds: []
+        }
+      }]);
+  
+      console.log("Transaction result:", result);
+  
+      if (result && result.transactionHash) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        toast({
+          title: "Market created!",
+          description: `Your new market has been successfully launched. Transaction hash: ${result.transactionHash}`,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        throw new Error("Transaction failed: No transaction hash received");
+      }
     } catch (error) {
+      console.error("Error creating market:", error);
       toast({
-        title: "Error creating market.",
-        description: "There was an error creating your market. Please try again.",
+        title: "Error creating market",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -105,7 +197,7 @@ const CreateMarketPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  };  
 
   const renderStepContent = (step: number) => {
     switch (step) {
@@ -168,76 +260,86 @@ const CreateMarketPage = () => {
         );
       case 2:
         return (
-          <HStack spacing={4} align="flex-start">
-            <FormControl isInvalid={!!errors.startTime}>
+          <VStack spacing={4} align="stretch">
+            <FormControl isInvalid={!!errors.startDate || !!errors.startTime}>
               <FormLabel>Start Time</FormLabel>
-              <Controller
-                control={control}
-                name="startTime"
-                render={({ field }) => (
-                  <SingleDatepicker
-                    name="start-date"
-                    date={field.value}
-                    onDateChange={field.onChange}
-                  />
-                )}
-              />
-              <FormErrorMessage>{errors.startTime?.message}</FormErrorMessage>
+              <HStack>
+                <Controller
+                  control={control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <SingleDatepicker
+                      name="start-date"
+                      date={field.value}
+                      onDateChange={field.onChange}
+                    />
+                  )}
+                />
+                <Input
+                  type="time"
+                  {...register("startTime", { required: "Start time is required" })}
+                />
+              </HStack>
+              <FormErrorMessage>{errors.startDate?.message || errors.startTime?.message}</FormErrorMessage>
               <FormHelperText>Choose when your market will open for predictions.</FormHelperText>
             </FormControl>
 
-            <FormControl isInvalid={!!errors.endTime}>
+            <FormControl isInvalid={!!errors.endDate || !!errors.endTime}>
               <FormLabel>End Time</FormLabel>
-              <Controller
-                control={control}
-                name="endTime"
-                render={({ field }) => (
-                  <SingleDatepicker
-                    name="end-date"
-                    date={field.value}
-                    onDateChange={field.onChange}
-                    minDate={watchedFields.startTime}
-                  />
-                )}
-              />
-              <FormErrorMessage>{errors.endTime?.message}</FormErrorMessage>
+              <HStack>
+                <Controller
+                  control={control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <SingleDatepicker
+                      name="end-date"
+                      date={field.value}
+                      onDateChange={field.onChange}
+                      minDate={watchedFields.startDate}
+                    />
+                  )}
+                />
+                <Input
+                  type="time"
+                  {...register("endTime", { required: "End time is required" })}
+                />
+              </HStack>
+              <FormErrorMessage>{errors.endDate?.message || errors.endTime?.message}</FormErrorMessage>
               <FormHelperText>Set when your market will close for final resolution.</FormHelperText>
             </FormControl>
-          </HStack>
+          </VStack>
         );
       case 3:
         return (
           <VStack spacing={6} align="stretch">
             <FormControl isInvalid={!!errors.collateralAmount}>
-              <FormLabel>Collateral Amount (UCMDX)</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none" children={<FiDollarSign color="gray.300" />} />
+            <FormLabel>Collateral Amount (UCMDX)</FormLabel>
+            <InputGroup>
                 <NumberInput min={0} width="100%">
-                  <NumberInputField {...register("collateralAmount", { required: "Collateral amount is required" })} />
-                  <NumberInputStepper>
+                <NumberInputField {...register("collateralAmount", { required: "Collateral amount is required" })} />
+                <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
-                  </NumberInputStepper>
+                </NumberInputStepper>
                 </NumberInput>
-              </InputGroup>
-              <FormErrorMessage>{errors.collateralAmount?.message}</FormErrorMessage>
-              <FormHelperText>Set the amount of UCMDX required as collateral for this market.</FormHelperText>
+            </InputGroup>
+            <FormErrorMessage>{errors.collateralAmount?.message}</FormErrorMessage>
+            <FormHelperText>Set the amount of UCMDX required as collateral for this market.</FormHelperText>
             </FormControl>
 
             <FormControl isInvalid={!!errors.rewardAmount}>
-              <FormLabel>Reward Amount (UCMDX)</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none" children={<FiDollarSign color="gray.300" />} />
+            <FormLabel>Reward Amount (UCMDX)</FormLabel>
+            <InputGroup>
                 <NumberInput min={0} width="100%">
-                  <NumberInputField {...register("rewardAmount", { required: "Reward amount is required" })} />
-                  <NumberInputStepper>
+                <NumberInputField {...register("rewardAmount", { required: "Reward amount is required" })} />
+                <NumberInputStepper>
                     <NumberIncrementStepper />
                     <NumberDecrementStepper />
-                  </NumberInputStepper>
+                </NumberInputStepper>
                 </NumberInput>
-              </InputGroup>
-              <FormErrorMessage>{errors.rewardAmount?.message}</FormErrorMessage>
-              <FormHelperText>Specify the reward amount for correct predictions in this market.</FormHelperText>
+            </InputGroup>
+            <FormErrorMessage>{errors.rewardAmount?.message}</FormErrorMessage>
+            <FormHelperText>Specify the reward amount for correct predictions in this market.</FormHelperText>
             </FormControl>
           </VStack>
         );
@@ -253,8 +355,8 @@ const CreateMarketPage = () => {
               <Badge key={index} colorScheme="blue" mr={2} mb={2}>{o.value}</Badge>
             ))}
             <Divider my={2} />
-            <Text><strong>Start Time:</strong> {watchedFields.startTime?.toLocaleString()}</Text>
-            <Text><strong>End Time:</strong> {watchedFields.endTime?.toLocaleString()}</Text>
+            <Text><strong>Start Time:</strong> {`${watchedFields.startDate?.toLocaleDateString()} ${watchedFields.startTime}`}</Text>
+            <Text><strong>End Time:</strong> {`${watchedFields.endDate?.toLocaleDateString()} ${watchedFields.endTime}`}</Text>
             <Divider my={2} />
             <Text><strong>Collateral Amount:</strong> {watchedFields.collateralAmount} UCMDX</Text>
             <Text><strong>Reward Amount:</strong> {watchedFields.rewardAmount} UCMDX</Text>
@@ -272,7 +374,7 @@ const CreateMarketPage = () => {
     <Box bg={bgColor} minHeight="100vh" py={12}>
       <Container maxW="container.lg">
         <VStack spacing={8} align="stretch">
-          <Heading textAlign="center" bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text" fontSize="4xl" fontWeight="extrabold">
+        <Heading textAlign="center" bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text" fontSize="4xl" fontWeight="extrabold">
             Create New Market
           </Heading>
           
@@ -351,6 +453,25 @@ const CreateMarketPage = () => {
           </form>
         </VStack>
       </Container>
+
+      {/* Modal for non-whitelisted users */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Not Whitelisted</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Text>
+                Your address is not whitelisted to create markets. Please contact the team to get your address whitelisted.
+              </Text>
+              <Button colorScheme="blue" onClick={() => window.open('mailto:support@predictx.com')}>
+                Contact Support
+              </Button>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

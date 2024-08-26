@@ -61,3 +61,5 @@ export const getWhitelistedAddresses = async () => {
       throw error;
     }
   };
+
+  
