@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { encodeQuery } from '../utils/queryUtils';
 
 // Dummy API
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -62,4 +63,13 @@ export const getWhitelistedAddresses = async () => {
     }
   };
 
-  
+
+// For fetching a specific market
+const getMarketQuery = (marketId: number) => {
+  const query = {
+    get_market: {
+      id: marketId
+    }
+  };
+  return encodeQuery(query);
+};

@@ -331,32 +331,6 @@ const AdminDashboard = () => {
         });
     };
 
-  const handleMarketAction = async (marketId: number, action: 'pause' | 'close' | 'cancel') => {
-    try {
-      await axios.post(`http://localhost:3001/api/market-action`, { marketId, action });
-      setMarkets(markets.map(market => 
-        market.id === marketId 
-          ? { ...market, status: action === 'pause' ? 'Paused' : action === 'close' ? 'Closed' : 'Cancelled' }
-          : market
-      ));
-      toast({
-        title: "Market Updated",
-        description: `Market ${marketId} has been ${action}ed.`,
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: `Failed to ${action} market.`,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>

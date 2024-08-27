@@ -1,7 +1,7 @@
 // src/app/home/components/FeaturedMarkets.tsx
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Heading,
@@ -15,11 +15,15 @@ import {
   useColorModeValue,
   Badge,
   chakra,
+  Spinner,
 } from '@chakra-ui/react';
 import { motion, useAnimation } from 'framer-motion';
 import { FaGlobe, FaClock, FaCoins, FaRocket } from 'react-icons/fa';
 import { useGlobalContext } from '../../../contexts/GlobalContext';
 import Link from 'next/link';
+import axios from 'axios';
+import { encodeQuery } from '../../../utils/queryUtils';
+
 
 const MotionBox = motion(Box);
 const MotionHeading = motion(Heading);
@@ -27,13 +31,13 @@ const MotionText = motion(Text);
 const MotionButton = motion(Button);
 
 const formatTime = (timestamp) => {
-  const date = new Date(timestamp * 1000);
+  const date = new Date(parseInt(timestamp) * 1000);
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 const getTimeRemaining = (endTime) => {
   const now = Math.floor(Date.now() / 1000);
-  const timeLeft = endTime - now;
+  const timeLeft = parseInt(endTime) - now;
   
   if (timeLeft <= 0) return `Ended on ${formatTime(endTime)}`;
   
@@ -70,7 +74,7 @@ const MarketCard = ({ market, config }) => {
     controls.start({ opacity: 1, y: 0 });
   }, [controls]);
 
-  const timeInfo = getTimeRemaining(parseInt(market.end_time));
+  const timeInfo = getTimeRemaining(market.end_time);
   const isActive = market.status === 'Active';
 
   return (
@@ -128,7 +132,7 @@ const MarketCard = ({ market, config }) => {
               <HStack>
                 <Icon as={FaGlobe} color="blue.500" />
                 <Text fontSize="xs" color="blue.500" fontWeight="bold">
-                  {Math.floor(Math.random() * 1000) + 100} participants
+                  {market.options.length} options
                 </Text>
               </HStack>
               <HStack>
@@ -145,7 +149,7 @@ const MarketCard = ({ market, config }) => {
               <HStack>
                 <Icon as={FaCoins} color="yellow.500" />
                 <Text fontSize="sm" fontWeight="bold" color={textColor}>
-                  {(parseInt(market.collateral_amount) / 1000000).toLocaleString()} {config?.coin_denom}
+                  {(parseInt(market.collateral_amount) / 1000000).toLocaleString()} CMDX
                 </Text>
               </HStack>
               <Badge colorScheme={isActive ? 'green' : 'red'} variant="subtle" borderRadius="full" px={2}>
@@ -182,15 +186,62 @@ const MarketCard = ({ market, config }) => {
 };
 
 export default function FeaturedMarkets() {
-  const { markets, config } = useGlobalContext();
+  const { config } = useGlobalContext();
+  const [markets, setMarkets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const controls = useAnimation();
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const headingColor = useColorModeValue('gray.800', 'white');
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const fetchMarkets = async () => {
+      try {
+        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  
+        const query = {
+          query_markets_by_status: {
+            status_code: 0 // Assuming 0 is for active markets
+          }
+        };
+        const encodedQuery = encodeQuery(query);
+  
+        const response = await axios.get(
+          `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+        );
+        setMarkets(response.data.data);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching markets:", error);
+        setError("Failed to fetch markets. Please try again later.");
+        setIsLoading(false);
+      }
+    };
+  
+    fetchMarkets();
+  }, []);
+
+  useEffect(() => {
     controls.start({ opacity: 1, y: 0 });
   }, [controls]);
+
+//   if (isLoading) {
+//     return (
+//       <Box display="flex" justifyContent="center" alignItems="center" height="300px">
+//         <Spinner size="xl" color="blue.500" />
+//       </Box>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <Box textAlign="center" color="red.500">
+//         <Text>{error}</Text>
+//       </Box>
+//     );
+//   }
 
   if (!markets || markets.length === 0) {
     return (

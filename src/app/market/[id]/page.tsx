@@ -10,15 +10,12 @@ import {
   VStack,
   HStack,
   Button,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  Input,
-  Select,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
   Progress,
-  Divider,
   Badge,
   Icon,
   Spinner,
@@ -29,7 +26,6 @@ import {
   Th,
   Td,
   useColorModeValue,
-  Image,
   Accordion,
   AccordionItem,
   AccordionButton,
@@ -37,14 +33,17 @@ import {
   AccordionIcon,
   Avatar,
   Textarea,
-  IconButton,
+  useToast,
+  FormControl,
+  FormLabel,
 } from '@chakra-ui/react';
-import { FaChartLine, FaClock, FaUsers, FaChevronDown, FaChartBar, FaThumbsUp, FaThumbsDown, FaReply } from 'react-icons/fa';
+import { FaChartLine, FaClock, FaUsers, FaThumbsUp, FaThumbsDown, FaReply, FaCoins, FaExchangeAlt } from 'react-icons/fa';
 import axios from 'axios';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { motion } from 'framer-motion';
+import { encodeQuery } from '../../../utils/queryUtils';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+
+const MotionBox = motion(Box);
 
 // Types
 interface Market {
@@ -70,21 +69,46 @@ interface Comment {
 }
 
 // Components
-const MarketHeader = ({ market }: { market: Market }) => (
-  <VStack align="stretch" spacing={4} mb={8} bg={useColorModeValue('white', 'gray.800')} p={6} borderRadius="lg" boxShadow="md">
-    <Heading size="2xl" bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text">{market.question}</Heading>
-    <Text fontSize="lg" color={useColorModeValue('gray.600', 'gray.300')}>{market.description}</Text>
-    <HStack spacing={4} wrap="wrap">
-      <Badge colorScheme={market.status === 'ACTIVE' ? 'green' : 'red'} fontSize="md" px={3} py={1}>{market.status}</Badge>
-      <Text><Icon as={FaClock} mr={2} />Ends: {new Date(market.end_time).toLocaleString()}</Text>
-      <Text><Icon as={FaUsers} mr={2} />1,234 participants</Text>
-    </HStack>
-    <Progress value={80} colorScheme="blue" size="sm" borderRadius="full" />
-    <Text fontWeight="bold" fontSize="xl">
-      Total Volume: {parseInt(market.collateral_amount).toLocaleString()} UCMDX
-    </Text>
-  </VStack>
-);
+const MarketHeader = ({ market }: { market: Market }) => {
+  const timeRemaining = getTimeRemaining(parseInt(market.end_time));
+  const statusColor = market.status === 'Active' ? 'green' : 'red';
+
+  return (
+    <MotionBox
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      bg={useColorModeValue('white', 'gray.800')}
+      p={8}
+      borderRadius="xl"
+      boxShadow="xl"
+      mb={8}
+    >
+      <VStack align="stretch" spacing={6}>
+        <Heading size="2xl" bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text">{market.question}</Heading>
+        <Text fontSize="lg" color={useColorModeValue('gray.600', 'gray.300')}>{market.description}</Text>
+        <Flex justify="space-between" flexWrap="wrap" gap={4}>
+          <HStack>
+            <Icon as={FaClock} color="blue.500" />
+            <Text fontWeight="bold">{timeRemaining}</Text>
+          </HStack>
+          <HStack>
+            <Icon as={FaUsers} color="purple.500" />
+            <Text fontWeight="bold">1,234 participants</Text>
+          </HStack>
+          <HStack>
+            <Icon as={FaCoins} color="yellow.500" />
+            <Text fontWeight="bold">{(parseInt(market.collateral_amount) / 1000000).toLocaleString()} UCMDX</Text>
+          </HStack>
+          <Badge colorScheme={statusColor} fontSize="md" px={3} py={1} borderRadius="full">
+            {market.status}
+          </Badge>
+        </Flex>
+        <Progress value={80} colorScheme="blue" size="sm" borderRadius="full" />
+      </VStack>
+    </MotionBox>
+  );
+};
 
 const OrderBook = ({ type, selectedOption }: { type: 'Yes' | 'No', selectedOption: string }) => {
   const bgColor = useColorModeValue('gray.50', 'gray.700');
@@ -92,21 +116,21 @@ const OrderBook = ({ type, selectedOption }: { type: 'Yes' | 'No', selectedOptio
   const barColor = type === 'Yes' ? 'green.200' : 'red.200';
 
   const orders = [
-    { price: 0.35, shares: 1000.00, total: 3939.54 },
-    { price: 0.29, shares: 1222.00, total: 3589.54 },
-    { price: 0.28, shares: 11195.92, total: 3235.16 },
-    { price: 0.27, shares: 371.48, total: 100.30 },
+    { odds: 2.85, shares: 1000.00, total: 3939.54 },
+    { odds: 3.45, shares: 1222.00, total: 3589.54 },
+    { odds: 3.57, shares: 11195.92, total: 3235.16 },
+    { odds: 3.70, shares: 371.48, total: 100.30 },
   ];
 
   const maxTotal = Math.max(...orders.map(o => o.total));
 
   return (
-    <Box mt={4} bg={bgColor} borderRadius="md" p={4}>
-      <Heading size="md" mb={2}>{selectedOption} - {type}</Heading>
+    <Box mt={4} bg={bgColor} borderRadius="md" p={4} boxShadow="md">
+      <Heading size="md" mb={4}>{selectedOption} - {type}</Heading>
       <Table variant="simple" size="sm">
         <Thead>
           <Tr>
-            <Th>PRICE</Th>
+            <Th>ODDS</Th>
             <Th>SHARES</Th>
             <Th>TOTAL</Th>
           </Tr>
@@ -114,7 +138,7 @@ const OrderBook = ({ type, selectedOption }: { type: 'Yes' | 'No', selectedOptio
         <Tbody>
           {orders.map((row, index) => (
             <Tr key={index} position="relative">
-              <Td color={type === 'Yes' ? 'green.500' : 'red.500'}>{row.price.toFixed(2)}¢</Td>
+              <Td color={type === 'Yes' ? 'green.500' : 'red.500'} fontWeight="bold">{row.odds.toFixed(2)}</Td>
               <Td>{row.shares.toFixed(2)}</Td>
               <Td>${row.total.toFixed(2)}</Td>
               <Box
@@ -135,35 +159,6 @@ const OrderBook = ({ type, selectedOption }: { type: 'Yes' | 'No', selectedOptio
   );
 };
 
-const HistoricalGraph = () => {
-  const data = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-    datasets: [
-      {
-        label: 'Price',
-        data: [0.3, 0.5, 0.2, 0.8, 0.4, 0.6, 0.7],
-        borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1
-      }
-    ]
-  };
-
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: 'Historical Price Chart'
-      }
-    }
-  };
-
-  return <Line data={data} options={options} />;
-};
-
 const OptionsList = ({ options, onSelectOption }: { options: string[], onSelectOption: (option: string) => void }) => (
   <Accordion allowMultiple>
     {options.map((option, index) => (
@@ -174,92 +169,153 @@ const OptionsList = ({ options, onSelectOption }: { options: string[], onSelectO
               <Text fontWeight="bold">{option}</Text>
             </Box>
             <HStack spacing={2}>
-              <Button colorScheme="green" size="sm">Yes (50%)</Button>
-              <Button colorScheme="red" size="sm">No (50%)</Button>
+              <Button colorScheme="green" size="sm">Yes (2.00)</Button>
+              <Button colorScheme="red" size="sm">No (2.00)</Button>
             </HStack>
             <AccordionIcon />
           </AccordionButton>
         </h2>
         <AccordionPanel pb={4}>
-          <Tabs>
-            <TabList>
-              <Tab>Order Book</Tab>
-              <Tab>Graph</Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                <Flex>
-                  <Box flex={1} mr={4}>
-                    <OrderBook type="Yes" selectedOption={option} />
-                  </Box>
-                  <Box flex={1}>
-                    <OrderBook type="No" selectedOption={option} />
-                  </Box>
-                </Flex>
-              </TabPanel>
-              <TabPanel>
-                <HistoricalGraph />
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
+          <Flex>
+            <Box flex={1} mr={4}>
+              <OrderBook type="Yes" selectedOption={option} />
+            </Box>
+            <Box flex={1}>
+              <OrderBook type="No" selectedOption={option} />
+            </Box>
+          </Flex>
         </AccordionPanel>
       </AccordionItem>
     ))}
   </Accordion>
 );
 
-const BettingInterface = ({ market, selectedOption }: { market: Market | null, selectedOption: string }) => (
-  <Box bg={useColorModeValue('white', 'gray.800')} p={6} borderRadius="lg" boxShadow="lg" height="100%">
-    <Tabs>
-      <TabList>
-        <Tab>Market Order</Tab>
-        <Tab>Limit Order</Tab>
-      </TabList>
-      <TabPanels>
-        <TabPanel>
-          <VStack align="stretch" spacing={4}>
-            <Text fontWeight="bold" fontSize="xl">{selectedOption}</Text>
-            <Text fontWeight="bold">Outcome</Text>
-            <HStack>
-              <Button colorScheme="green" flex={1}>Yes 27¢</Button>
-              <Button colorScheme="red" flex={1}>No 74¢</Button>
-            </HStack>
-            <Text fontWeight="bold">Amount</Text>
-            <Input placeholder="$0" />
-            <Button colorScheme="blue" isFullWidth>Place Market Order</Button>
-            <HStack justify="space-between">
-              <Text>Avg price</Text>
-              <Text fontWeight="bold" color="blue.500">0¢</Text>
-            </HStack>
-            <HStack justify="space-between">
-              <Text>Shares</Text>
-              <Text fontWeight="bold">0.00</Text>
-            </HStack>
-            <HStack justify="space-between">
-              <Text>Potential return</Text>
-              <Text fontWeight="bold" color="green.500">$0.00 (0.00%)</Text>
-            </HStack>
-          </VStack>
-        </TabPanel>
-        <TabPanel>
-          <VStack align="stretch" spacing={4}>
-            <Text fontWeight="bold" fontSize="xl">{selectedOption}</Text>
-            <Text fontWeight="bold">Order Type</Text>
-            <HStack>
-              <Button colorScheme="green" flex={1}>Buy</Button>
-              <Button colorScheme="red" flex={1}>Sell</Button>
-            </HStack>
-            <Text fontWeight="bold">Limit Price</Text>
-            <Input placeholder="0.00" />
-            <Text fontWeight="bold">Shares</Text>
-            <Input placeholder="0" />
-            <Button colorScheme="blue" isFullWidth>Place Limit Order</Button>
-          </VStack>
-        </TabPanel>
-      </TabPanels>
-    </Tabs>
-  </Box>
-);
+const BettingInterface = ({ market, selectedOption }: { market: Market | null, selectedOption: string }) => {
+    const [betAmount, setBetAmount] = useState(0);
+    const [odds, setOdds] = useState(2.00);
+    const [betType, setBetType] = useState<'Yes' | 'No'>('Yes');
+    const [orderType, setOrderType] = useState<'Market' | 'Limit'>('Market');
+    const toast = useToast();
+  
+    const calculatePotentialPayout = (amount: number, odds: number) => {
+      return amount * odds;
+    };
+  
+    const handlePlaceBet = () => {
+      toast({
+        title: "Bet Placed",
+        description: `You placed a ${betType} bet of ${betAmount} UCMDX on "${selectedOption}" at ${odds} odds.`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+    };
+  
+    const bgColor = useColorModeValue('white', 'gray.800');
+    const borderColor = useColorModeValue('gray.200', 'gray.600');
+    const activeColor = useColorModeValue('blue.500', 'blue.300');
+  
+    return (
+      <Box
+        bg={bgColor}
+        borderRadius="lg"
+        boxShadow="md"
+        border="1px solid"
+        borderColor={borderColor}
+        p={6}
+      >
+        <VStack spacing={6} align="stretch">
+          <Heading size="md" textAlign="center" mb={2}>
+            Place Your Bet
+          </Heading>
+  
+          <HStack spacing={4} justify="center">
+            {['Market', 'Limit'].map((type) => (
+              <Button
+                key={type}
+                onClick={() => setOrderType(type as 'Market' | 'Limit')}
+                variant="ghost"
+                fontWeight="medium"
+                color={orderType === type ? activeColor : 'inherit'}
+                borderBottom={orderType === type ? `2px solid ${activeColor}` : 'none'}
+                borderRadius="none"
+                _hover={{ bg: 'transparent' }}
+              >
+                {type} Order
+              </Button>
+            ))}
+          </HStack>
+  
+          <Text fontWeight="bold" fontSize="lg">
+            {selectedOption}
+          </Text>
+  
+          <HStack spacing={4}>
+            {['Yes', 'No'].map((type) => (
+              <Button
+                key={type}
+                onClick={() => setBetType(type as 'Yes' | 'No')}
+                colorScheme={betType === type ? (type === 'Yes' ? 'green' : 'red') : 'gray'}
+                variant={betType === type ? 'solid' : 'outline'}
+                flex={1}
+              >
+                {type}
+              </Button>
+            ))}
+          </HStack>
+  
+          {orderType === 'Limit' && (
+            <FormControl>
+              <FormLabel fontWeight="medium">Odds</FormLabel>
+              <NumberInput 
+                value={odds} 
+                onChange={(valueString) => setOdds(Number(valueString))}
+                min={1.01}
+                step={0.01}
+                precision={2}
+              >
+                <NumberInputField />
+                <NumberInputStepper>
+                  <NumberIncrementStepper />
+                  <NumberDecrementStepper />
+                </NumberInputStepper>
+              </NumberInput>
+            </FormControl>
+          )}
+  
+          <FormControl>
+            <FormLabel fontWeight="medium">Amount (UCMDX)</FormLabel>
+            <NumberInput 
+              value={betAmount} 
+              onChange={(valueString) => setBetAmount(Number(valueString))}
+              min={0}
+            >
+              <NumberInputField />
+              <NumberInputStepper>
+                <NumberIncrementStepper />
+                <NumberDecrementStepper />
+              </NumberInputStepper>
+            </NumberInput>
+          </FormControl>
+  
+          <Button
+            colorScheme="blue"
+            onClick={handlePlaceBet}
+            size="lg"
+          >
+            Place {orderType} Order
+          </Button>
+  
+          <HStack justify="space-between">
+            <Text fontWeight="medium">Potential Payout:</Text>
+            <Text fontWeight="bold" color={useColorModeValue('green.600', 'green.300')}>
+              {calculatePotentialPayout(betAmount, odds).toFixed(2)} UCMDX
+            </Text>
+          </HStack>
+        </VStack>
+      </Box>
+    );
+  };
 
 const CommentSection = () => {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -282,7 +338,16 @@ const CommentSection = () => {
   };
 
   const CommentItem = ({ comment }: { comment: Comment }) => (
-    <Box borderWidth={1} borderRadius="md" p={4} mb={4}>
+    <MotionBox
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      borderWidth={1}
+      borderRadius="lg"
+      p={4}
+      mb={4}
+      boxShadow="md"
+    >
       <HStack spacing={4} mb={2}>
         <Avatar size="sm" name={comment.author} />
         <Text fontWeight="bold">{comment.author}</Text>
@@ -290,104 +355,163 @@ const CommentSection = () => {
       </HStack>
       <Text mb={4}>{comment.content}</Text>
       <HStack spacing={4}>
-        <Button leftIcon={<FaThumbsUp />} size="sm" variant="outline">
+        <Button leftIcon={<FaThumbsUp />} size="sm" variant="outline" colorScheme="blue">
           {comment.upvotes}
         </Button>
-        <Button leftIcon={<FaThumbsDown />} size="sm" variant="outline">
+        <Button leftIcon={<FaThumbsDown />} size="sm" variant="outline" colorScheme="red">
           {comment.downvotes}
         </Button>
-        <Button leftIcon={<FaReply />} size="sm" variant="outline">
+        <Button leftIcon={<FaReply />} size="sm" variant="outline" colorScheme="gray">
           Reply
         </Button>
       </HStack>
-    </Box>
+    </MotionBox>
   );
 
   return (
-    <Box bg={useColorModeValue('white', 'gray.800')} p={6} borderRadius="lg" boxShadow="md" mt={8}>
-      <Heading size="lg" mb={6}>Comments</Heading>
+    <Box bg={useColorModeValue('white', 'gray.800')} p={6} borderRadius="xl" boxShadow="xl" mt={8}>
+      <Heading size="lg" mb={6}>Discussion</Heading>
       <VStack spacing={4} align="stretch" mb={8}>
         <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a comment..."
+          placeholder="Share your thoughts..."
+          borderRadius="md"
         />
-        <Button colorScheme="blue" onClick={handleAddComment}>
+        <Button colorScheme="blue" onClick={handleAddComment} leftIcon={<FaReply />}>
           Post Comment
         </Button>
       </VStack>
       {comments.map((comment) => (
         <CommentItem key={comment.id} comment={comment} />
-      ))}
-    </Box>
-  );
+    ))}
+  </Box>
+);
 };
 
-// Main Component
-const IndividualMarketPage = () => {
-  const [market, setMarket] = useState<Market | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState('');
+const getTimeRemaining = (endTime: number) => {
+const now = Math.floor(Date.now() / 1000);
+const timeLeft = endTime - now;
 
-  useEffect(() => {
-    const fetchMarket = async () => {
-      try {
-        const response = await axios.get<Market>('http://localhost:3001/api/market/1');
-        setMarket(response.data);
-        setSelectedOption(response.data.options[0]);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching market:', error);
-        setError('Failed to fetch market data. Please try again later.');
-        setIsLoading(false);
-      }
-    };
+if (timeLeft <= 0) return 'Ended';
 
-    fetchMarket();
-  }, []);
+const days = Math.floor(timeLeft / 86400);
+const hours = Math.floor((timeLeft % 86400) / 3600);
+const minutes = Math.floor((timeLeft % 3600) / 60);
 
-  if (isLoading) {
-    return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
-        <Spinner size="xl" color="blue.500" thickness="4px" />
-      </Box>
-    );
-  }
+if (days > 0) return `${days}d ${hours}h remaining`;
+if (hours > 0) return `${hours}h ${minutes}m remaining`;
+return `${minutes}m remaining`;
+};
 
-  if (error) {
-    return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
-        <Text color="red.500" fontSize="xl" fontWeight="bold">{error}</Text>
-      </Box>
-    );
-  }
+// Client Component
+const MarketContent = ({ id }: { id: string }) => {
+const [market, setMarket] = useState<Market | null>(null);
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
+const [selectedOption, setSelectedOption] = useState('');
 
-  if (!market) {
-    return <Box>Market not found</Box>;
-  }
+const bgColor = useColorModeValue('gray.50', 'gray.900');
 
+useEffect(() => {
+  const fetchMarket = async () => {
+    try {
+      const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+      const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+      const query = {
+        query_market: {
+          id: parseInt(id)
+        }
+      };
+      const encodedQuery = encodeQuery(query);
+
+      console.log('Encoded query:', encodedQuery); // For debugging
+
+      const response = await axios.get(
+        `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+      );
+
+      const marketData = response.data.data;
+      setMarket(marketData);
+      setSelectedOption(marketData.options[0]);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Error fetching market:', error);
+      setError('Failed to fetch market data. Please try again later.');
+      setIsLoading(false);
+    }
+  };
+
+  fetchMarket();
+}, [id]);
+
+if (isLoading) {
   return (
-    <Box bg={useColorModeValue('gray.50', 'gray.900')} minHeight="100vh">
-      <Container maxW="container.xl" py={8}>
-        <Flex gap={8} flexDirection={{ base: 'column', lg: 'row' }}>
-          {/* Left Column - Main Content */}
-          <Box flex={3}>
-            <MarketHeader market={market} />
-            <OptionsList options={market.options} onSelectOption={setSelectedOption} />
-            <CommentSection />
-          </Box>
-
-          {/* Right Column - Sidebar */}
-          <Box flex={1}>
-            <Box position="sticky" top={4}>
-              <BettingInterface market={market} selectedOption={selectedOption} />
-            </Box>
-          </Box>
-        </Flex>
-      </Container>
+    <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
+      <Spinner size="xl" color="blue.500" thickness="4px" />
     </Box>
   );
+}
+
+if (error) {
+  return (
+    <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
+      <Text color="red.500" fontSize="xl" fontWeight="bold">{error}</Text>
+    </Box>
+  );
+}
+
+if (!market) {
+  return <Box>Market not found</Box>;
+}
+
+return (
+  <Box bg={bgColor} minHeight="100vh">
+    <Container maxW="container.xl" py={12}>
+      <Flex gap={8} flexDirection={{ base: 'column', lg: 'row' }}>
+        {/* Left Column - Main Content */}
+        <MotionBox
+          flex={3}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <MarketHeader market={market} />
+          <MotionBox
+            bg={useColorModeValue('white', 'gray.800')}
+            p={6}
+            borderRadius="xl"
+            boxShadow="xl"
+            mb={8}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Heading size="lg" mb={4}>Market Options</Heading>
+            <OptionsList options={market.options} onSelectOption={setSelectedOption} />
+          </MotionBox>
+          <CommentSection />
+        </MotionBox>
+
+        {/* Right Column - Sidebar */}
+        <MotionBox
+          flex={1}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Box position="sticky" top={4}>
+            <BettingInterface market={market} selectedOption={selectedOption} />
+          </Box>
+        </MotionBox>
+      </Flex>
+    </Container>
+  </Box>
+);
 };
 
-export default IndividualMarketPage;
+// Server Component
+export default function IndividualMarketPage({ params }: { params: { id: string } }) {
+return <MarketContent id={params.id} />;
+}
