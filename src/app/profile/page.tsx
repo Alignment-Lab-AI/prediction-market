@@ -37,10 +37,7 @@ import {
   GridItem,
   Icon,
   Switch,
-  Progress,
   useColorModeValue,
-  CircularProgress,
-  CircularProgressLabel,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -57,6 +54,8 @@ import { FaWallet, FaChartBar, FaHistory, FaBell, FaTrophy, FaExchangeAlt, FaUse
 import axios from 'axios';
 import NextLink from 'next/link';
 import { motion } from 'framer-motion';
+import { useWeb3 } from '../../contexts/Web3Context';
+import { encodeQuery } from '../../utils/queryUtils';
 
 const theme = extendTheme({
   config: {
@@ -87,9 +86,6 @@ interface UserProfile {
   wonBets: number;
   lostBets: number;
   winRate: number;
-  level: number;
-  xp: number;
-  nextLevelXp: number;
   avatar: string;
 }
 
@@ -101,6 +97,7 @@ interface Bet {
   position: string;
   amount: string;
   matched_amount: string;
+  unmatched_amount: string;
   odds: string;
   redeemed: boolean;
 }
@@ -177,9 +174,6 @@ const UserProfilePage = () => {
     wonBets: 0,
     lostBets: 0,
     winRate: 0,
-    level: 1,
-    xp: 0,
-    nextLevelXp: 100,
     avatar: "https://bit.ly/broken-link",
   });
   const [bets, setBets] = useState<Bet[]>([]);
@@ -191,6 +185,7 @@ const UserProfilePage = () => {
   });
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isWalletConnected, walletAddress } = useWeb3();
 
   const bgColor = useColorModeValue("gray.50", "gray.900");
   const cardBgColor = useColorModeValue("rgba(255, 255, 255, 0.8)", "rgba(26, 32, 44, 0.8)");
@@ -201,18 +196,43 @@ const UserProfilePage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const betsResponse = await axios.get<Bet[]>('http://localhost:3001/api/user-bets/comdex1nh4gxgzq7hw8fvtkxjg4kpfqmsq65szqxxdqye');
-        setBets(betsResponse.data);
+      if (!isWalletConnected || !walletAddress) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet to view your profile.",
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+        });
+        setIsLoading(false);
+        return;
+      }
 
-        const totalBets = betsResponse.data.length;
-        const wonBets = betsResponse.data.filter(bet => bet.redeemed).length;
+      try {
+        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+        const query = {
+          query_user_bets: {
+            user_addr: walletAddress
+          }
+        };
+        const encodedQuery = encodeQuery(query);
+
+        const betsResponse = await axios.get(
+          `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+        );
+        setBets(betsResponse.data.data);
+
+        const totalBets = betsResponse.data.data.length;
+        const wonBets = betsResponse.data.data.filter(bet => bet.redeemed).length;
         const lostBets = totalBets - wonBets;
         const winRate = totalBets > 0 ? (wonBets / totalBets) * 100 : 0;
-        const balance = betsResponse.data.reduce((acc, bet) => acc + parseInt(bet.amount), 0) / 1000000;
+        const balance = betsResponse.data.data.reduce((acc, bet) => acc + parseFloat(bet.amount), 0) / 1000000;
 
         setUserProfile(prev => ({
           ...prev,
+          walletAddress,
           totalBets,
           wonBets,
           lostBets,
@@ -235,7 +255,7 @@ const UserProfilePage = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, isWalletConnected, walletAddress]);
 
   const handleNotificationToggle = (type: 'email' | 'push' | 'sms') => {
     setNotificationSettings(prev => ({
@@ -275,7 +295,7 @@ const UserProfilePage = () => {
       <Box bg={bgColor} minHeight="100vh" py={12}>
         <Container maxW="container.xl">
           <VStack spacing={10} align="stretch">
-            <MotionBox
+          <MotionBox
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -298,22 +318,10 @@ const UserProfilePage = () => {
                   </Avatar>
                   <VStack align="start" spacing={2}>
                     <Heading size="2xl" bgGradient={gradientColor} bgClip="text">{userProfile.name}</Heading>
-                    <Text color="gray.500" fontSize="md">Level {userProfile.level} Predictor</Text>
+                    <Text color="gray.500" fontSize="md">Prediction Market Enthusiast</Text>
                     <Text color="gray.500" fontSize="sm" fontStyle="italic" isTruncated maxW="300px">
                       {userProfile.walletAddress}
                     </Text>
-                    <HStack spacing={4}>
-                      <CircularProgress value={(userProfile.xp / userProfile.nextLevelXp) * 100} color={accentColor} size="80px" thickness="8px">
-                        <CircularProgressLabel fontWeight="bold">{userProfile.level}</CircularProgressLabel>
-                      </CircularProgress>
-                      <VStack align="start" spacing={0}>
-                        <Text fontSize="sm" color="gray.500">Experience</Text>
-                        <Text fontSize="lg" fontWeight="bold" color={textColor}>
-                          {userProfile.xp}/{userProfile.nextLevelXp} XP
-                        </Text>
-                        <Progress value={(userProfile.xp / userProfile.nextLevelXp) * 100} size="sm" width="150px" colorScheme="blue" borderRadius="full" />
-                      </VStack>
-                    </HStack>
                   </VStack>
                 </HStack>
                 <VStack align="end" spacing={4} mt={{ base: 6, md: 0 }}>
@@ -347,10 +355,10 @@ const UserProfilePage = () => {
 
             <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={8}>
               {[
-                { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} UCMDX`, color: 'blue.400' },
+                { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} CMDX`, color: 'blue.400' },
                 { label: 'Total Bets', icon: FaChartBar, value: userProfile.totalBets, color: 'purple.500' },
                 { label: 'Win Rate', icon: FaTrophy, value: `${userProfile.winRate.toFixed(2)}%`, color: 'yellow.400', helpText: `${userProfile.wonBets} won / ${userProfile.lostBets} lost` },
-                { label: 'Profit/Loss', icon: FaExchangeAlt, value: `${userProfile.balance > 0 ? '+' : ''}${userProfile.balance.toFixed(2)} UCMDX`, color: userProfile.balance > 0 ? 'green.400' : 'red.400' },
+                { label: 'Profit/Loss', icon: FaExchangeAlt, value: `${userProfile.balance > 0 ? '+' : ''}${userProfile.balance.toFixed(2)} CMDX`, color: userProfile.balance > 0 ? 'green.400' : 'red.400' },
               ].map((stat, index) => (
                 <MotionBox
                   key={index}
@@ -437,31 +445,41 @@ const UserProfilePage = () => {
                           <Tr>
                             <Th>Market ID</Th>
                             <Th>Amount</Th>
+                            <Th>Matched</Th>
+                            <Th>Unmatched</Th>
                             <Th>Odds</Th>
                             <Th>Position</Th>
                             <Th>Status</Th>
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {bets.map((bet) => (
-                            <Tr key={bet.id}>
-                              <Td>{bet.market_id}</Td>
-                              <Td>{(parseInt(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
-                              <Td>{bet.odds}</Td>
-                              <Td>{bet.position}</Td>
-                              <Td>
-                                <Badge 
-                                  colorScheme={bet.redeemed ? 'green' : 'yellow'} 
-                                  borderRadius="full" 
-                                  px={3} 
-                                  py={1}
-                                  textTransform="capitalize"
-                                >
-                                  {bet.redeemed ? 'Redeemed' : 'Active'}
-                                </Badge>
-                              </Td>
-                            </Tr>
-                          ))}
+                          {bets.map((bet) => {
+                            const totalAmount = parseFloat(bet.amount);
+                            const matchedAmount = parseFloat(bet.matched_amount);
+                            const unmatchedAmount = totalAmount - matchedAmount;
+
+                            return (
+                              <Tr key={bet.id}>
+                                <Td>{bet.market_id}</Td>
+                                <Td>{(totalAmount / 1000000).toFixed(2)} CMDX</Td>
+                                <Td>{(matchedAmount / 1000000).toFixed(2)} CMDX</Td>
+                                <Td>{(unmatchedAmount / 1000000).toFixed(2)} CMDX</Td>
+                                <Td>{bet.odds}</Td>
+                                <Td>{bet.position}</Td>
+                                <Td>
+                                  <Badge 
+                                    colorScheme={bet.redeemed ? 'green' : 'yellow'} 
+                                    borderRadius="full" 
+                                    px={3} 
+                                    py={1}
+                                    textTransform="capitalize"
+                                  >
+                                    {bet.redeemed ? 'Redeemed' : 'Active'}
+                                  </Badge>
+                                </Td>
+                              </Tr>
+                            );
+                          })}
                         </Tbody>
                       </Table>
                     </Box>

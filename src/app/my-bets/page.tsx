@@ -6,8 +6,6 @@ import {
   extendTheme,
   Box,
   Container,
-  Heading,
-  Text,
   VStack,
   HStack,
   Flex,
@@ -26,25 +24,23 @@ import {
   Tab,
   TabPanel,
   useToast,
-  Avatar,
-  AvatarBadge,
   Stat,
   StatLabel,
   StatNumber,
   StatHelpText,
   StatArrow,
   Grid,
-  GridItem,
   Icon,
-  Progress,
   Tooltip,
   useColorModeValue,
-  CircularProgress,
-  CircularProgressLabel,
+  Text, 
 } from '@chakra-ui/react';
-import { FaCoins, FaTrophy, FaHistory, FaChartLine, FaExchangeAlt, FaStar, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaCoins, FaTrophy, FaHistory, FaChartLine, FaExchangeAlt, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { motion } from 'framer-motion';
+import { useWeb3 } from '../../contexts/Web3Context';
+import { connectKeplr, broadcastTransaction } from '../../utils/web3';
+import { encodeQuery } from '../../utils/queryUtils';
 
 const theme = extendTheme({
   config: {
@@ -71,6 +67,7 @@ interface Bet {
   position: string;
   amount: string;
   matched_amount: string;
+  unmatched_amount: string;
   odds: string;
   redeemed: boolean;
 }
@@ -81,21 +78,12 @@ interface Market {
   status: string;
 }
 
-const userProfile = {
-  name: "Crypto Enthusiast",
-  walletAddress: "comdex1nh4gxgzq7hw8fvtkxjg4kpfqmsq65szqxxdqye",
-  joinDate: "Nov 2023",
-  avatar: "https://bit.ly/broken-link",
-  level: 5,
-  xp: 750,
-  nextLevelXp: 1000,
-};
-
 const MyBetsPage = () => {
   const [bets, setBets] = useState<Bet[]>([]);
   const [markets, setMarkets] = useState<{ [key: number]: Market }>({});
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
+  const { isWalletConnected, walletAddress } = useWeb3();
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const cardBgColor = useColorModeValue('white', 'gray.800');
@@ -104,15 +92,39 @@ const MyBetsPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const betsResponse = await axios.get<Bet[]>('http://localhost:3001/api/user-bets/comdex1nh4gxgzq7hw8fvtkxjg4kpfqmsq65szqxxdqye');
-        setBets(betsResponse.data);
+      if (!isWalletConnected || !walletAddress) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet to view your bets.",
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+        });
+        setIsLoading(false);
+        return;
+      }
 
-        const marketIds = [...new Set(betsResponse.data.map(bet => bet.market_id))];
-        const marketPromises = marketIds.map(id => axios.get<Market>(`http://localhost:3001/api/market/${id}`));
+      try {
+        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+        const query = {
+          query_user_bets: {
+            user_addr: walletAddress
+          }
+        };
+        const encodedQuery = encodeQuery(query);
+
+        const betsResponse = await axios.get(
+          `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+        );
+        setBets(betsResponse.data.data);
+
+        const marketIds = [...new Set(betsResponse.data.data.map((bet: Bet) => bet.market_id))];
+        const marketPromises = marketIds.map(id => axios.get<Market>(`${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodeQuery({ query_market: { id } })}`));
         const marketResponses = await Promise.all(marketPromises);
         const marketData = marketResponses.reduce((acc, response) => {
-          acc[response.data.id] = response.data;
+          acc[response.data.data.id] = response.data.data;
           return acc;
         }, {} as { [key: number]: Market });
         setMarkets(marketData);
@@ -131,35 +143,149 @@ const MyBetsPage = () => {
     };
 
     fetchData();
-  }, [toast]);
+  }, [toast, isWalletConnected, walletAddress]);
 
   const activeBets = bets.filter(bet => !bet.redeemed);
   const pastBets = bets.filter(bet => bet.redeemed);
 
   const totalBets = bets.length;
   const currentBalance = bets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
-  const profitLoss = pastBets.reduce((sum, bet) => sum + (parseFloat(bet.amount) * parseFloat(bet.odds) - parseFloat(bet.amount)), 0);
+  const profitLoss = pastBets.reduce((sum, bet) => sum + (parseFloat(bet.matched_amount) * parseFloat(bet.odds) - parseFloat(bet.amount)), 0);
 
   const cancelBet = async (betId: number) => {
-    toast({
-      title: "Bet Cancelled",
-      description: `Bet ${betId} has been cancelled.`,
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
-    setBets(bets.filter(bet => bet.id !== betId));
+    if (!isWalletConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to cancel a bet.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      if (!chainId) {
+        throw new Error("Chain ID not defined in environment variables");
+      }
+
+      const { accounts } = await connectKeplr(chainId);
+      const senderAddress = accounts[0].address;
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+      if (!contractAddress) {
+        throw new Error("Contract address not defined in environment variables");
+      }
+
+      const msg = {
+        cancel_bet: {
+          bet_id: betId
+        }
+      };
+
+      const message = {
+        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+        value: {
+          sender: senderAddress,
+          contract: contractAddress,
+          msg: Buffer.from(JSON.stringify(msg)).toString('base64'),
+          funds: []
+        }
+      };
+
+      const result = await broadcastTransaction(chainId, [message]);
+
+      console.log("Bet cancelled successfully:", result);
+
+      toast({
+        title: "Bet Cancelled",
+        description: `Bet ${betId} has been cancelled. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      // Update the local state to reflect the cancellation
+      setBets(bets.filter(bet => bet.id !== betId));
+    } catch (err) {
+      console.error("Error cancelling bet:", err);
+      toast({
+        title: "Error",
+        description: "Failed to cancel bet. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   const redeemBet = async (betId: number) => {
-    toast({
-      title: "Bet Redeemed",
-      description: `Bet ${betId} has been redeemed.`,
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
-    setBets(bets.map(bet => bet.id === betId ? {...bet, redeemed: true} : bet));
+    if (!isWalletConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to redeem winnings.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      if (!chainId) {
+        throw new Error("Chain ID not defined in environment variables");
+      }
+
+      const { accounts } = await connectKeplr(chainId);
+      const senderAddress = accounts[0].address;
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+      if (!contractAddress) {
+        throw new Error("Contract address not defined in environment variables");
+      }
+
+      const msg = {
+        redeem_winnings: {
+          bet_id: betId
+        }
+      };
+
+      const message = {
+        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+        value: {
+          sender: senderAddress,
+          contract: contractAddress,
+          msg: Buffer.from(JSON.stringify(msg)).toString('base64'),
+          funds: []
+        }
+      };
+
+      const result = await broadcastTransaction(chainId, [message]);
+
+      console.log("Winnings redeemed successfully:", result);
+
+      toast({
+        title: "Winnings Redeemed",
+        description: `Winnings for bet ${betId} have been redeemed. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      // Update the local state to reflect the redemption
+      setBets(bets.map(bet => bet.id === betId ? {...bet, redeemed: true} : bet));
+    } catch (err) {
+      console.error("Error redeeming winnings:", err);
+      toast({
+        title: "Error",
+        description: "Failed to redeem winnings. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   if (isLoading) {
@@ -175,38 +301,6 @@ const MyBetsPage = () => {
       <Box bg={bgColor} minHeight="100vh" py={8}>
         <Container maxW="container.xl">
           <VStack spacing={8} align="stretch">
-            {/* User Profile Header */}
-            <MotionBox
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Flex direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" bg={cardBgColor} p={6} borderRadius="lg" boxShadow="xl">
-                <HStack spacing={4}>
-                  <Avatar size="xl" name={userProfile.name} src={userProfile.avatar}>
-                    <AvatarBadge boxSize="1.25em" bg="green.500" />
-                  </Avatar>
-                  <VStack align="start" spacing={1}>
-                    <Heading size="xl" color={textColor}>{userProfile.name}</Heading>
-                    <Text color="gray.500" fontSize="sm">{userProfile.walletAddress}</Text>
-                    <Text color="gray.500" fontSize="sm">Joined {userProfile.joinDate}</Text>
-                    <HStack>
-                      <Badge colorScheme="purple">Level {userProfile.level}</Badge>
-                      {[...Array(3)].map((_, i) => (
-                        <Icon key={i} as={FaStar} color="yellow.400" />
-                      ))}
-                    </HStack>
-                  </VStack>
-                </HStack>
-                <VStack align="end" spacing={2}>
-                  <CircularProgress value={(userProfile.xp / userProfile.nextLevelXp) * 100} color="green.400" size="100px">
-                    <CircularProgressLabel>{userProfile.level}</CircularProgressLabel>
-                  </CircularProgress>
-                  <Text fontSize="sm" color="gray.500">XP: {userProfile.xp} / {userProfile.nextLevelXp}</Text>
-                </VStack>
-              </Flex>
-            </MotionBox>
-
             {/* Statistics Grid */}
             <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }} gap={6}>
               {[
@@ -261,42 +355,55 @@ const MyBetsPage = () => {
                         <Tr>
                           <Th>Market</Th>
                           <Th>Amount</Th>
+                          <Th>Matched</Th>
+                          <Th>Unmatched</Th>
                           <Th>Odds</Th>
                           <Th>Potential Winnings</Th>
                           <Th>Action</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
-                        {activeBets.map((bet) => (
-                          <Tr key={bet.id}>
-                            <Td>{markets[bet.market_id]?.question}</Td>
-                            <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
-                            <Td>{bet.odds}</Td>
-                            <Td>{((parseFloat(bet.amount) / 1000000) * parseFloat(bet.odds)).toFixed(2)} UCMDX</Td>
-                            <Td>
-                              <HStack spacing={2}>
-                                <Tooltip label="Cancel this bet">
-                                  <Button colorScheme="red" size="sm" onClick={() => cancelBet(bet.id)}>
+                        {activeBets.map((bet) => {
+                          const totalAmount = parseFloat(bet.amount);
+                          const matchedAmount = parseFloat(bet.matched_amount);
+                          const unmatchedAmount = totalAmount - matchedAmount;
+                          
+                          return (
+                            <Tr key={bet.id}>
+                              <Td>{markets[bet.market_id]?.question}</Td>
+                              <Td>{(totalAmount / 1000000).toFixed(2)} CMDX</Td>
+                              <Td>{(matchedAmount / 1000000).toFixed(2)} CMDX</Td>
+                              <Td>{(unmatchedAmount / 1000000).toFixed(2)} CMDX</Td>
+                              <Td>{bet.odds}</Td>
+                              <Td>{((matchedAmount / 1000000) * parseFloat(bet.odds)).toFixed(2)} CMDX</Td>
+                              <Td>
+                                <HStack spacing={2}>
+                                  <Button 
+                                    colorScheme="red" 
+                                    size="sm" 
+                                    onClick={() => cancelBet(bet.id)}
+                                    isDisabled={unmatchedAmount === 0}
+                                  >
                                     <Icon as={FaTimesCircle} mr={2} />
                                     Cancel
                                   </Button>
-                                </Tooltip>
-                                <Tooltip label={markets[bet.market_id]?.status === 'Settled' ? 'Redeem your winnings!' : 'Market not yet settled'}>
-                                  <Button
-                                    colorScheme="green"
-                                    size="sm"
-                                    onClick={() => redeemBet(bet.id)}
-                                    isDisabled={markets[bet.market_id]?.status !== 'Settled'}
-                                    opacity={markets[bet.market_id]?.status === 'Settled' ? 1 : 0.5}
-                                  >
-                                    <Icon as={FaCheckCircle} mr={2} />
-                                    Redeem
-                                  </Button>
-                                </Tooltip>
-                              </HStack>
-                            </Td>
-                          </Tr>
-                        ))}
+                                  <Tooltip label={markets[bet.market_id]?.status === 'Settled' ? 'Redeem your winnings!' : 'Market not yet settled'}>
+                                    <Button
+                                      colorScheme="green"
+                                      size="sm"
+                                      onClick={() => redeemBet(bet.id)}
+                                      isDisabled={markets[bet.market_id]?.status !== 'Settled'}
+                                      opacity={markets[bet.market_id]?.status === 'Settled' ? 1 : 0.5}
+                                    >
+                                      <Icon as={FaCheckCircle} mr={2} />
+                                      Redeem
+                                    </Button>
+                                  </Tooltip>
+                                </HStack>
+                              </Td>
+                            </Tr>
+                          );
+                        })}
                       </Tbody>
                     </Table>
                   </TabPanel>
@@ -307,6 +414,7 @@ const MyBetsPage = () => {
                         <Tr>
                           <Th>Market</Th>
                           <Th>Amount</Th>
+                          <Th>Matched</Th>
                           <Th>Odds</Th>
                           <Th>Outcome</Th>
                           <Th>Winnings</Th>
@@ -317,13 +425,19 @@ const MyBetsPage = () => {
                           <Tr key={bet.id}>
                             <Td>{markets[bet.market_id]?.question}</Td>
                             <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} UCMDX</Td>
+                            <Td>{(parseFloat(bet.matched_amount) / 1000000).toFixed(2)} UCMDX</Td>
                             <Td>{bet.odds}</Td>
                             <Td>
                               <Badge colorScheme={bet.redeemed ? 'green' : 'red'}>
                                 {bet.redeemed ? 'Won' : 'Lost'}
                               </Badge>
                             </Td>
-                            <Td>{bet.redeemed ? ((parseFloat(bet.amount) / 1000000) * parseFloat(bet.odds)).toFixed(2) : '0'} UCMDX</Td>
+                            <Td>
+                              {bet.redeemed 
+                                ? ((parseFloat(bet.matched_amount) / 1000000) * parseFloat(bet.odds)).toFixed(2) 
+                                : '0'
+                              } UCMDX
+                            </Td>
                           </Tr>
                         ))}
                       </Tbody>
