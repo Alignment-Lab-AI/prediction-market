@@ -40,7 +40,9 @@ export const broadcastTransaction = async (
       );
   
       const fee = calculateFee(gasLimit, gasPrice);
-      const fundCoins = coins(funds[0].amount, funds[0].denom);
+      
+      // Only create fundCoins if funds array is not empty
+      const fundCoins = funds.length > 0 ? coins(funds[0].amount, funds[0].denom) : undefined;
   
       const result = await client.execute(
         accounts[0].address,

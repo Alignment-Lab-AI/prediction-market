@@ -38,6 +38,17 @@ import {
   InputGroup,
   InputLeftElement,
   Tooltip,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Select,
+  FormControl,
+  FormLabel,
 } from '@chakra-ui/react';
 import { FaCheckCircle, FaChartLine, FaUsers, FaCoins, FaGavel, FaSearch, FaExclamationTriangle, FaPause, FaTimes } from 'react-icons/fa';
 import axios from 'axios';
@@ -46,6 +57,7 @@ import { getRealConfig, getWhitelistedAddresses } from '../../utils/api';
 import { broadcastTransaction, connectKeplr } from '../../utils/web3';
 import { DeliverTxResponse } from "@cosmjs/stargate";
 import { useWeb3 } from '../../contexts/Web3Context'; 
+import { encodeQuery } from '../../utils/queryUtils';
 
 const theme = extendTheme({
   fonts: {
@@ -64,22 +76,33 @@ const theme = extendTheme({
 
 const MotionBox = motion(Box);
 
+// Updated Market interface to match new structure
 interface Market {
   id: number;
+  creator: string;
   question: string;
+  description: string;
+  options: string[];
+  category: string;
+  start_time: number;
+  end_time: number;
   status: string;
+  resolution_bond: string;
+  resolution_reward: string;
+  result: null | string;
 }
 
+// Updated Config interface
 interface Config {
-    admin: string;
-    token_denom: string;
-    platform_fee: string;
-    treasury: string;
-    challenging_period: number;
-    voting_period: number;
-    min_bet: string;
-    whitelist_enabled: boolean;
-  }
+  admin: string;
+  token_denom: string;
+  platform_fee: string;
+  treasury: string;
+  challenging_period: number;
+  voting_period: number;
+  min_bet: string;
+  whitelist_enabled: boolean;
+}
 
 const AdminDashboard = () => {
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -90,42 +113,78 @@ const AdminDashboard = () => {
   const [filter, setFilter] = useState('All');
   const toast = useToast();
 
+  // New state for config editing
+  const [editingConfig, setEditingConfig] = useState({ field: '', value: '' });
+  const { isOpen: isEditConfigOpen, onOpen: onEditConfigOpen, onClose: onEditConfigClose } = useDisclosure();
+
   const bgColor = useColorModeValue("gray.50", "gray.900");
   const cardBgColor = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const accentColor = "blue.400";
   const gradientColor = "linear(to-r, blue.400, purple.500)";
-  const { isWalletConnected } = useWeb3(); // Use the useWeb3 hook
+  const { isWalletConnected } = useWeb3();
 
-    const fetchMarkets = async () => {
-        console.log("Fetching markets...");
-        try {
-        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
-        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-        const GET_ACTIVE_MARKETS_QUERY = process.env.NEXT_PUBLIC_GET_ACTIVE_MARKETS_QUERY;
-
-        const response = await axios.get(
-            `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${GET_ACTIVE_MARKETS_QUERY}`
-        );
-        console.log("Markets fetched successfully:", response.data);
-        setMarkets(response.data.data);
-        } catch (error) {
-        console.error("Error fetching markets:", error.response ? error.response.data : error.message);
-        toast({
-            title: "Error",
-            description: "Failed to fetch markets.",
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-        });
-        }
-    };
+  // Updated fetchMarkets function
+  const fetchMarkets = async () => {
+    console.log("Fetching markets...");
+    try {
+      const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+      const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   
+      const query = {
+        markets: {
+          status: "Active",
+          start_after: 0,
+          limit: 10
+        }
+      };
+      const encodedQuery = encodeQuery(query);
+  
+      const response = await axios.get(
+        `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+      );
+      console.log("Markets fetched successfully:", response.data);
+      setMarkets(response.data.data);
+    } catch (error) {
+      console.error("Error fetching markets:", error.response ? error.response.data : error.message);
+      toast({
+        title: "Error",
+        description: "Failed to fetch markets.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+  
+  // Updated fetchWhitelistedAddresses function
   const fetchWhitelistedAddresses = async () => {
     try {
-      const addresses = await getWhitelistedAddresses();
-      setWhitelistedAddresses(addresses || []);
+      const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+      const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  
+      const query = {
+        whitelisted_addresses: {
+          start_after: null,
+          limit: 10
+        }
+      };
+      const encodedQuery = encodeQuery(query);
+  
+      const response = await axios.get(
+        `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+      );
+      
+      // Check if the response has the expected structure
+      if (response.data && Array.isArray(response.data.data)) {
+        setWhitelistedAddresses(response.data.data);
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        setWhitelistedAddresses([]);
+      }
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching whitelisted addresses:', error);
       toast({
@@ -135,6 +194,8 @@ const AdminDashboard = () => {
         duration: 5000,
         isClosable: true,
       });
+      setIsLoading(false);
+      setWhitelistedAddresses([]);
     }
   };
 
@@ -163,27 +224,23 @@ const AdminDashboard = () => {
 
   const handleAddToWhitelist = async () => {
     if (!isWalletConnected) {
-        toast({
-          title: "Wallet not connected",
-          description: "Please connect your wallet to perform this action.",
-          status: "warning",
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to perform this action.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
-      if (!chainId) {
-        throw new Error("Chain ID not defined in environment variables");
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
       }
   
-      const { accounts } = await connectKeplr(chainId);
-      const senderAddress = accounts[0].address;
-      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-      if (!contractAddress) {
-        throw new Error("Contract address not defined in environment variables");
-      }
+      console.log("Preparing to add address to whitelist:", newAddress);
   
       const msg = {
         add_to_whitelist: {
@@ -191,29 +248,22 @@ const AdminDashboard = () => {
         }
       };
   
-      const message = {
-        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-        value: {
-          sender: senderAddress,
-          contract: contractAddress,
-          msg: Buffer.from(JSON.stringify(msg)).toString('base64'),
-          funds: []
+      // No funds are sent with this transaction
+      const funds: { denom: string; amount: string }[] = [];
+  
+      console.log("Sending transaction to add to whitelist:", JSON.stringify(msg, null, 2));
+  
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+  
+      // Custom JSON stringifier to handle BigInt
+      const bigIntStringifier = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
         }
-      };
-
-      const safeStringify = (obj: any) => {
-        return JSON.stringify(obj, (key, value) =>
-          typeof value === 'bigint'
-            ? value.toString()
-            : value
-        );
+        return value;
       };
   
-      console.log("Sending transaction to add to whitelist:", safeStringify(message));
-  
-      const result = await broadcastTransaction(chainId, [message]);
-  
-      console.log("Add to whitelist result:", safeStringify(result));
+      console.log("Add to whitelist result:", JSON.stringify(result, bigIntStringifier, 2));
   
       // Update the UI state immediately
       setWhitelistedAddresses(prevAddresses => [...prevAddresses, newAddress]);
@@ -241,28 +291,23 @@ const AdminDashboard = () => {
 
   const handleRemoveFromWhitelist = async (address: string) => {
     if (!isWalletConnected) {
-        toast({
-          title: "Wallet not connected",
-          description: "Please connect your wallet to perform this action.",
-          status: "warning",
-          duration: 3000,
-          isClosable: true,
-        });
-        return;
-      }
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to perform this action.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
-      if (!chainId) {
-        throw new Error("Chain ID not defined in environment variables");
-      }
-  
-      const { accounts } = await connectKeplr(chainId);
-      const senderAddress = accounts[0].address;
-  
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-      if (!contractAddress) {
-        throw new Error("Contract address not defined in environment variables");
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
       }
+  
+      console.log("Preparing to remove address from whitelist:", address);
   
       const msg = {
         remove_from_whitelist: {
@@ -270,33 +315,26 @@ const AdminDashboard = () => {
         }
       };
   
-      const message = {
-        typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
-        value: {
-          sender: senderAddress,
-          contract: contractAddress,
-          msg: Buffer.from(JSON.stringify(msg)).toString('base64'),
-          funds: []
+      // No funds are sent with this transaction
+      const funds: { denom: string; amount: string }[] = [];
+  
+      console.log("Sending transaction to remove from whitelist:", JSON.stringify(msg, null, 2));
+  
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+  
+      // Custom JSON stringifier to handle BigInt
+      const bigIntStringifier = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
         }
-      };
-
-      const safeStringify = (obj: any) => {
-        return JSON.stringify(obj, (key, value) =>
-          typeof value === 'bigint'
-            ? value.toString()
-            : value
-        );
+        return value;
       };
   
-      console.log("Sending transaction to remove from whitelist:", safeStringify(message));
-  
-      const result = await broadcastTransaction(chainId, [message]);
-  
-      console.log("Remove from whitelist result:", safeStringify(result));
+      console.log("Remove from whitelist result:", JSON.stringify(result, bigIntStringifier, 2));
   
       // Update the UI state immediately
       setWhitelistedAddresses(prevAddresses => prevAddresses.filter(a => a !== address));
-      
+  
       toast({
         title: "Address Removed",
         description: `${address} has been removed from the whitelist. Transaction hash: ${result.transactionHash}`,
@@ -317,16 +355,277 @@ const AdminDashboard = () => {
     }
   };
 
-    const handleProposeResult = async (marketId: number) => {
-        // Implement the logic to propose a result for a closed market
-        toast({
-        title: "Feature not implemented",
-        description: "Proposing a result is not available in this demo.",
-        status: "info",
+  // New function to handle cancelling a market
+  const handleCancelMarket = async (marketId: number) => {
+    if (!isWalletConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to perform this action.",
+        status: "warning",
         duration: 3000,
         isClosable: true,
-        });
+      });
+      return;
+    }
+  
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
+      }
+  
+      console.log("Preparing to cancel market:", marketId);
+  
+      const msg = {
+        cancel_market: {
+          market_id: marketId
+        }
+      };
+  
+      // No funds are sent with this transaction
+      const funds: { denom: string; amount: string }[] = [];
+  
+      console.log("Sending transaction to cancel market:", JSON.stringify(msg, null, 2));
+  
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+  
+      // Custom JSON stringifier to handle BigInt
+      const bigIntStringifier = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      };
+  
+      console.log("Cancel market result:", JSON.stringify(result, bigIntStringifier, 2));
+  
+      toast({
+        title: "Market Cancelled",
+        description: `Market ${marketId} has been cancelled. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+  
+      fetchMarkets(); // Refresh the markets list
+    } catch (err) {
+      console.error("Error cancelling market:", err);
+      toast({
+        title: "Error",
+        description: "Failed to cancel market. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // New function to handle closing a market
+  const handleCloseMarket = async (marketId: number) => {
+    if (!isWalletConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to perform this action.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+  
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
+      }
+  
+      console.log("Preparing to close market:", marketId);
+  
+      const msg = {
+        close_market: {
+          market_id: marketId
+        }
+      };
+  
+      // No funds are sent with this transaction
+      const funds: { denom: string; amount: string }[] = [];
+  
+      console.log("Sending transaction to close market:", JSON.stringify(msg, null, 2));
+  
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+  
+      // Custom JSON stringifier to handle BigInt
+      const bigIntStringifier = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      };
+  
+      console.log("Close market result:", JSON.stringify(result, bigIntStringifier, 2));
+  
+      toast({
+        title: "Market Closed",
+        description: `Market ${marketId} has been closed. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+  
+      fetchMarkets(); // Refresh the markets list
+    } catch (err) {
+      console.error("Error closing market:", err);
+      toast({
+        title: "Error",
+        description: "Failed to close market. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // New function to handle proposing a result for a market
+  const handleProposeResult = async (marketId: number, winningOutcome: number) => {
+  if (!isWalletConnected) {
+    toast({
+      title: "Wallet not connected",
+      description: "Please connect your wallet to perform this action.",
+      status: "warning",
+      duration: 3000,
+      isClosable: true,
+    });
+    return;
+  }
+
+  try {
+    const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+    const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+    if (!chainId || !contractAddress) {
+      throw new Error("Chain ID or Contract address not defined in environment variables");
+    }
+
+    console.log("Preparing to propose result for market:", marketId);
+
+    const msg = {
+      propose_result: {
+        market_id: marketId,
+        winning_outcome: winningOutcome
+      }
     };
+
+    // No funds are sent with this transaction
+    const funds: { denom: string; amount: string }[] = [];
+
+    console.log("Sending transaction to propose result:", JSON.stringify(msg, null, 2));
+
+    const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+
+    // Custom JSON stringifier to handle BigInt
+    const bigIntStringifier = (key: string, value: any) => {
+      if (typeof value === 'bigint') {
+        return value.toString();
+      }
+      return value;
+    };
+
+    console.log("Propose result result:", JSON.stringify(result, bigIntStringifier, 2));
+
+    toast({
+      title: "Result Proposed",
+      description: `Result proposed for market ${marketId}. Transaction hash: ${result.transactionHash}`,
+      status: "success",
+      duration: 5000,
+      isClosable: true,
+    });
+
+    fetchMarkets(); // Refresh the markets list
+  } catch (err) {
+    console.error("Error proposing result:", err);
+    toast({
+      title: "Error",
+      description: "Failed to propose result. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+      status: "error",
+      duration: 5000,
+      isClosable: true,
+    });
+  }
+};
+
+  // New function to handle updating config
+  const handleUpdateConfig = async () => {
+    if (!isWalletConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to perform this action.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+  
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+  
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
+      }
+  
+      console.log("Preparing to update config:", editingConfig);
+  
+      const msg = {
+        update_config: {
+          field: editingConfig.field,
+          value: editingConfig.value
+        }
+      };
+  
+      // No funds are sent with this transaction
+      const funds: { denom: string; amount: string }[] = [];
+  
+      console.log("Sending transaction to update config:", JSON.stringify(msg, null, 2));
+  
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+  
+      // Custom JSON stringifier to handle BigInt
+      const bigIntStringifier = (key: string, value: any) => {
+        if (typeof value === 'bigint') {
+          return value.toString();
+        }
+        return value;
+      };
+  
+      console.log("Update config result:", JSON.stringify(result, bigIntStringifier, 2));
+  
+      toast({
+        title: "Config Updated",
+        description: `${editingConfig.field} has been updated to ${editingConfig.value}. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+  
+      onEditConfigClose();
+      const updatedConfig = await getRealConfig();
+      setConfig(updatedConfig);
+    } catch (err) {
+      console.error("Error updating config:", err);
+      toast({
+        title: "Error",
+        description: "Failed to update config. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -370,7 +669,7 @@ const AdminDashboard = () => {
             <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={8}>
               {[
                 { label: 'Total Markets', icon: FaChartLine, value: markets.length, color: 'blue.400' },
-                { label: 'Whitelisted Users', icon: FaUsers, value: whitelistedAddresses.length, color: 'green.400' },
+                { label: 'Whitelisted Users', icon: FaUsers, value: whitelistedAddresses?.length || 0, color: 'green.400' },
                 { label: 'Platform Fee', icon: FaCoins, value: config ? `${parseInt(config.platform_fee) / 100}%` : 'N/A', color: 'yellow.400' },
                 { label: 'Voting Time', icon: FaGavel, value: config ? `${config.voting_period / 3600}h` : 'N/A', color: 'purple.400' },
               ].map((stat, index) => (
@@ -429,144 +728,166 @@ const AdminDashboard = () => {
                 </TabList>
 
                 <TabPanels mt={6}>
-                <TabPanel>
+                  <TabPanel>
                     <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
-                    <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Market Management</Heading>
-                    <HStack mb={4}>
+                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Market Management</Heading>
+                      <HStack mb={4}>
                         <InputGroup>
-                        <InputLeftElement pointerEvents="none">
+                          <InputLeftElement pointerEvents="none">
                             <Icon as={FaSearch} color="gray.300" />
-                        </InputLeftElement>
-                        <Input placeholder="Search markets" onChange={(e) => setFilter(e.target.value)} />
+                          </InputLeftElement>
+                          <Input placeholder="Search markets" onChange={(e) => setFilter(e.target.value)} />
                         </InputGroup>
                         <Button onClick={() => setFilter('All')}>All</Button>
                         <Button onClick={() => setFilter('Active')}>Active</Button>
                         <Button onClick={() => setFilter('Closed')}>Closed</Button>
-                    </HStack>
-                    <Table variant="simple">
+                      </HStack>
+                      <Table variant="simple">
                         <Thead>
-                        <Tr>
+                            <Tr>
                             <Th>ID</Th>
                             <Th>Question</Th>
                             <Th>Status</Th>
                             <Th>Actions</Th>
-                        </Tr>
+                            </Tr>
                         </Thead>
                         <Tbody>
-                        {filteredMarkets.map((market) => (
+                            {filteredMarkets.map((market) => (
                             <Tr key={market.id}>
-                            <Td>{market.id}</Td>
-                            <Td>{market.question}</Td>
-                            <Td>
+                                <Td>{market.id}</Td>
+                                <Td>{market.question}</Td>
+                                <Td>
                                 <Badge colorScheme={market.status === 'Active' ? 'green' : 'yellow'}>
-                                {market.status}
+                                    {market.status}
                                 </Badge>
-                            </Td>
-                            <Td>
-                                <Tooltip label={market.status !== 'Closed' ? "Market must be closed to propose result" : "Propose Result"}>
-                                <Button
+                                </Td>
+                                <Td>
+                                <HStack spacing={2}>
+                                    <Button
                                     size="sm"
-                                    colorScheme="blue"
-                                    onClick={() => handleProposeResult(market.id)}
-                                    isDisabled={market.status !== 'Closed'}
-                                    opacity={market.status !== 'Closed' ? 0.5 : 1}
-                                    _hover={{
-                                    opacity: market.status !== 'Closed' ? 0.5 : 0.8
-                                    }}
-                                >
-                                    <Icon as={FaCheckCircle} mr={2} />
+                                    colorScheme="red"
+                                    onClick={() => handleCancelMarket(market.id)}
+                                    >
+                                    Cancel
+                                    </Button>
+                                    <Button
+                                    size="sm"
+                                    colorScheme="yellow"
+                                    onClick={() => handleCloseMarket(market.id)}
+                                    >
+                                    Close
+                                    </Button>
+                                    <Button
+                                    size="sm"
+                                    colorScheme="green"
+                                    onClick={() => handleProposeResult(market.id, 0)} // You might want to add a modal for selecting the winning outcome
+                                    >
                                     Propose Result
-                                </Button>
-                                </Tooltip>
-                            </Td>
+                                    </Button>
+                                </HStack>
+                                </Td>
                             </Tr>
-                        ))}
+                            ))}
                         </Tbody>
-                    </Table>
-                    </Box>
-                </TabPanel>
-                  <TabPanel>
-                    <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
-                      <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Whitelist Management</Heading>
-                      <HStack mb={4}>
-                        <Input placeholder="Enter address to whitelist" value={newAddress} onChange={(e) => setNewAddress(e.target.value)} />
-                        <Button onClick={handleAddToWhitelist} colorScheme="blue">Add</Button>
-                      </HStack>
-                      <Table variant="simple">
-                        <Thead>
-                          <Tr>
-                            <Th>Address</Th>
-                            <Th>Action</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {whitelistedAddresses.map((address) => (
-                            <Tr key={address}>
-                              <Td>{address}</Td>
-                              <Td>
-                                <Button colorScheme="red" size="sm" onClick={() => handleRemoveFromWhitelist(address)}>
-                                  Remove
-                                </Button>
-                              </Td>
-                            </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
+                        </Table>
                     </Box>
                   </TabPanel>
+                  <TabPanel>
+                    <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
+                    <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Whitelist Management</Heading>
+                    <HStack mb={4}>
+                        <Input 
+                        placeholder="Enter address to whitelist" 
+                        value={newAddress} 
+                        onChange={(e) => setNewAddress(e.target.value)} 
+                        />
+                        <Button onClick={handleAddToWhitelist} colorScheme="blue">Add</Button>
+                    </HStack>
+                    {whitelistedAddresses === undefined ? (
+                        <Spinner size="xl" color="blue.500" />
+                    ) : whitelistedAddresses.length === 0 ? (
+                        <Text>No whitelisted addresses found.</Text>
+                    ) : (
+                        <Table variant="simple">
+                        <Thead>
+                            <Tr>
+                            <Th>Address</Th>
+                            <Th>Action</Th>
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            {whitelistedAddresses.map((address) => (
+                            <Tr key={address}>
+                                <Td>{address}</Td>
+                                <Td>
+                                <Button 
+                                    colorScheme="red" 
+                                    size="sm" 
+                                    onClick={() => handleRemoveFromWhitelist(address)}
+                                >
+                                    Remove
+                                </Button>
+                                </Td>
+                            </Tr>
+                            ))}
+                        </Tbody>
+                        </Table>
+                    )}
+                    </Box>
+                </TabPanel>
                   <TabPanel>
                     <Box bg={cardBgColor} p={6} borderRadius="2xl" boxShadow="xl">
                       <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Platform Configuration</Heading>
                       <Grid templateColumns="repeat(2, 1fr)" gap={6}>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Admin Address</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.admin}</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Token Denomination</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.token_denom}</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Platform Fee</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{parseInt(config?.platform_fee || '0') / 100}%</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Treasury Account</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.treasury}</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Challenging Period</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.challenging_period / 3600} hours</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Voting Period</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.voting_period / 3600} hours</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Minimum Bet</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{parseInt(config?.min_bet || '0') / 1000000} CMDX</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
                         <GridItem>
-                            <Stat>
+                          <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Whitelist Enabled</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.whitelist_enabled ? 'Yes' : 'No'}</StatNumber>
-                            </Stat>
+                          </Stat>
                         </GridItem>
-                        </Grid>
+                      </Grid>
                       <Button 
                         mt={6} 
                         bgGradient={gradientColor} 
@@ -574,13 +895,7 @@ const AdminDashboard = () => {
                         _hover={{
                           bgGradient: "linear(to-r, blue.500, purple.600)",
                         }}
-                        onClick={() => toast({
-                          title: "Feature not implemented",
-                          description: "Editing configuration is not available in this demo.",
-                          status: "info",
-                          duration: 3000,
-                          isClosable: true,
-                        })}
+                        onClick={onEditConfigOpen}
                       >
                         Edit Configuration
                       </Button>
@@ -646,6 +961,41 @@ const AdminDashboard = () => {
           </VStack>
         </Container>
       </Box>
+    <Modal isOpen={isEditConfigOpen} onClose={onEditConfigClose}>
+    <ModalOverlay />
+    <ModalContent>
+        <ModalHeader>Edit Configuration</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+        <FormControl>
+            <FormLabel>Field</FormLabel>
+            <Select 
+            value={editingConfig.field} 
+            onChange={(e) => setEditingConfig({ ...editingConfig, field: e.target.value })}
+            >
+            <option value="platform_fee">Platform Fee</option>
+            <option value="min_bet">Minimum Bet</option>
+            <option value="challenging_period">Challenging Period</option>
+            <option value="voting_period">Voting Period</option>
+            <option value="whitelist_enabled">Whitelist Enabled</option>
+            </Select>
+        </FormControl>
+        <FormControl mt={4}>
+            <FormLabel>Value</FormLabel>
+            <Input 
+            value={editingConfig.value} 
+            onChange={(e) => setEditingConfig({ ...editingConfig, value: e.target.value })}
+            />
+        </FormControl>
+        </ModalBody>
+        <ModalFooter>
+        <Button colorScheme="blue" mr={3} onClick={handleUpdateConfig}>
+            Update
+        </Button>
+        <Button variant="ghost" onClick={onEditConfigClose}>Cancel</Button>
+        </ModalFooter>
+    </ModalContent>
+    </Modal>
     </ChakraProvider>
   );
 };
