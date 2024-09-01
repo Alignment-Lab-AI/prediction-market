@@ -71,13 +71,15 @@ interface Market {
 }
 
 interface Config {
-  admin: string;
-  coin_denom: string;
-  platform_fee: number;
-  protocol_treasury_account: string;
-  challenging_time: number;
-  voting_time: number;
-}
+    admin: string;
+    token_denom: string;
+    platform_fee: string;
+    treasury: string;
+    challenging_period: number;
+    voting_period: number;
+    min_bet: string;
+    whitelist_enabled: boolean;
+  }
 
 const AdminDashboard = () => {
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -139,13 +141,11 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [configResponse] = await Promise.all([
-          getRealConfig(),
-          fetchMarkets(),
-          fetchWhitelistedAddresses(),
-        ]);
-
+        const configResponse = await getRealConfig();
+        console.log("Config response:", configResponse);
         setConfig(configResponse);
+        await fetchMarkets();
+        await fetchWhitelistedAddresses();
       } catch (err) {
         console.error('Error fetching data:', err);
         toast({
@@ -158,10 +158,8 @@ const AdminDashboard = () => {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchData();
-  }, [toast]);
+    };fetchData();
+  }, []);
 
   const handleAddToWhitelist = async () => {
     if (!isWalletConnected) {
@@ -182,7 +180,6 @@ const AdminDashboard = () => {
   
       const { accounts } = await connectKeplr(chainId);
       const senderAddress = accounts[0].address;
-  
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
       if (!contractAddress) {
         throw new Error("Contract address not defined in environment variables");
@@ -374,8 +371,8 @@ const AdminDashboard = () => {
               {[
                 { label: 'Total Markets', icon: FaChartLine, value: markets.length, color: 'blue.400' },
                 { label: 'Whitelisted Users', icon: FaUsers, value: whitelistedAddresses.length, color: 'green.400' },
-                { label: 'Platform Fee', icon: FaCoins, value: `${config?.platform_fee/ 100}%`, color: 'yellow.400' },
-                { label: 'Voting Time', icon: FaGavel, value: `${config?.voting_time / 3600}h`, color: 'purple.400' },
+                { label: 'Platform Fee', icon: FaCoins, value: config ? `${parseInt(config.platform_fee) / 100}%` : 'N/A', color: 'yellow.400' },
+                { label: 'Voting Time', icon: FaGavel, value: config ? `${config.voting_period / 3600}h` : 'N/A', color: 'purple.400' },
               ].map((stat, index) => (
                 <MotionBox
                   key={index}
@@ -522,42 +519,54 @@ const AdminDashboard = () => {
                       <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Platform Configuration</Heading>
                       <Grid templateColumns="repeat(2, 1fr)" gap={6}>
                         <GridItem>
-                          <Stat>
+                            <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Admin Address</StatLabel>
                             <StatNumber fontSize="md" color={accentColor}>{config?.admin}</StatNumber>
-                          </Stat>
+                            </Stat>
                         </GridItem>
                         <GridItem>
-                          <Stat>
-                            <StatLabel fontWeight="medium" color={textColor}>Coin Denomination</StatLabel>
-                            <StatNumber fontSize="md" color={accentColor}>{config?.coin_denom}</StatNumber>
-                          </Stat>
+                            <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Token Denomination</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.token_denom}</StatNumber>
+                            </Stat>
                         </GridItem>
                         <GridItem>
-                          <Stat>
+                            <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Platform Fee</StatLabel>
-                            <StatNumber fontSize="md" color={accentColor}>{config?.platform_fee}%</StatNumber>
-                          </Stat>
+                            <StatNumber fontSize="md" color={accentColor}>{parseInt(config?.platform_fee || '0') / 100}%</StatNumber>
+                            </Stat>
                         </GridItem>
                         <GridItem>
-                          <Stat>
+                            <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Treasury Account</StatLabel>
-                            <StatNumber fontSize="md" color={accentColor}>{config?.protocol_treasury_account}</StatNumber>
-                          </Stat>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.treasury}</StatNumber>
+                            </Stat>
                         </GridItem>
                         <GridItem>
-                          <Stat>
-                            <StatLabel fontWeight="medium" color={textColor}>Challenging Time</StatLabel>
-                            <StatNumber fontSize="md" color={accentColor}>{config?.challenging_time / 3600} hours</StatNumber>
-                          </Stat>
+                            <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Challenging Period</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.challenging_period / 3600} hours</StatNumber>
+                            </Stat>
                         </GridItem>
                         <GridItem>
-                          <Stat>
-                            <StatLabel fontWeight="medium" color={textColor}>Voting Time</StatLabel>
-                            <StatNumber fontSize="md" color={accentColor}>{config?.voting_time / 3600} hours</StatNumber>
-                          </Stat>
+                            <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Voting Period</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.voting_period / 3600} hours</StatNumber>
+                            </Stat>
                         </GridItem>
-                      </Grid>
+                        <GridItem>
+                            <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Minimum Bet</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{parseInt(config?.min_bet || '0') / 1000000} CMDX</StatNumber>
+                            </Stat>
+                        </GridItem>
+                        <GridItem>
+                            <Stat>
+                            <StatLabel fontWeight="medium" color={textColor}>Whitelist Enabled</StatLabel>
+                            <StatNumber fontSize="md" color={accentColor}>{config?.whitelist_enabled ? 'Yes' : 'No'}</StatNumber>
+                            </Stat>
+                        </GridItem>
+                        </Grid>
                       <Button 
                         mt={6} 
                         bgGradient={gradientColor} 

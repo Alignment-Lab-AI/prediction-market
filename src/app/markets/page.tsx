@@ -3,35 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
-  Box,
-  Container,
-  Input,
-  InputGroup,
-  InputLeftElement,
-  Button,
-  Flex,
-  Text,
-  SimpleGrid,
-  VStack,
-  HStack,
-  Badge,
-  Icon,
-  useColorModeValue,
-  Spinner,
-  Tabs,
-  TabList,
-  Tab,
-  IconButton,
-  Tooltip,
-  Heading,
-  chakra,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  useTheme,
+  Box, Container, Input, InputGroup, InputLeftElement, Button, Flex, Text,
+  SimpleGrid, VStack, HStack, Badge, Icon, useColorModeValue, Spinner,
+  Tabs, TabList, Tab, IconButton, Tooltip, Heading, chakra, Table,
+  Thead, Tbody, Tr, Th, Td, useTheme, Alert, AlertIcon, Divider
 } from '@chakra-ui/react';
 import { SearchIcon, ViewIcon } from '@chakra-ui/icons';
 import { FaUsers, FaClock, FaCoins, FaRocket, FaList, FaChartLine } from 'react-icons/fa';
@@ -42,14 +17,19 @@ import { encodeQuery } from '../../utils/queryUtils';
 const MotionBox = motion(Box);
 
 interface Market {
-  id: number;
-  question: string;
-  description: string;
-  options: string[];
-  end_time: string;
-  status: string;
-  collateral_amount: string;
-}
+    id: number;
+    creator: string;
+    question: string;
+    description: string;
+    options: string[];
+    category: string;
+    start_time: number;
+    end_time: number;
+    status: string;
+    resolution_bond: string;
+    resolution_reward: string;
+    result: null | string;
+  }
 
 const GlassBox = chakra(Box, {
   baseStyle: {
@@ -63,9 +43,9 @@ const GlassBox = chakra(Box, {
   },
 });
 
-const getTimeRemaining = (endTime: string) => {
+const getTimeRemaining = (endTime: number) => {
   const now = Math.floor(Date.now() / 1000);
-  const timeLeft = parseInt(endTime) - now;
+  const timeLeft = endTime - now;
 
   if (timeLeft <= 0) return 'Ended';
 
@@ -77,7 +57,7 @@ const getTimeRemaining = (endTime: string) => {
   return 'Ending soon';
 };
 
-const MarketCard = ({ market }) => {
+const MarketCard = ({ market }: { market: Market }) => {
     const cardBg = useColorModeValue('rgba(255, 255, 255, 0.8)', 'rgba(26, 32, 44, 0.8)');
     const textColor = useColorModeValue('gray.800', 'white');
     const mutedTextColor = useColorModeValue('gray.600', 'gray.400');
@@ -116,7 +96,7 @@ const MarketCard = ({ market }) => {
         }}
       >
         <VStack align="stretch" p={6} spacing={4} flex={1} overflowY="hidden">
-          <Heading size="md" noOfLines={2} color={textColor} fontWeight="bold">
+          <Heading size="md" color={textColor} fontWeight="bold">
             {market.question}
           </Heading>
           <Text fontSize="sm" color={mutedTextColor} noOfLines={2}>
@@ -124,16 +104,12 @@ const MarketCard = ({ market }) => {
           </Text>
           <Box overflowY="auto" flex={1} css={scrollbarStyles}>
             {market.options.map((option, index) => (
-              <Flex key={index} justify="space-between" align="center" mb={2}>
-                <Text fontSize="sm" fontWeight="medium" color={textColor}>
+              <React.Fragment key={index}>
+                <Text fontSize="sm" fontWeight="medium" color={textColor} py={2}>
                   {option}
                 </Text>
-                <HStack>
-                  <Badge colorScheme="blue" fontSize="xs">
-                    {Math.floor(Math.random() * 100)}%
-                  </Badge>
-                </HStack>
-              </Flex>
+                {index < market.options.length - 1 && <Divider />}
+              </React.Fragment>
             ))}
           </Box>
         </VStack>
@@ -159,7 +135,7 @@ const MarketCard = ({ market }) => {
             <HStack>
               <Icon as={FaCoins} color="yellow.500" />
               <Text fontSize="sm" fontWeight="bold" color={textColor}>
-                ${(parseInt(market.collateral_amount) / 1000000).toLocaleString()}
+                ${(parseInt(market.resolution_bond) / 1000000).toLocaleString()}
               </Text>
             </HStack>
           </HStack>
@@ -183,7 +159,7 @@ const MarketCard = ({ market }) => {
     );
   };
 
-const MarketListItem = ({ market }) => {
+const MarketListItem = ({ market }: { market: Market }) => {
   const textColor = useColorModeValue('gray.700', 'white');
   const timeRemaining = getTimeRemaining(market.end_time);
 
@@ -195,7 +171,7 @@ const MarketListItem = ({ market }) => {
           <Text fontSize="sm" color="gray.500" noOfLines={1}>{market.description}</Text>
         </VStack>
       </Td>
-      <Td isNumeric>${(parseInt(market.collateral_amount) / 1000000).toLocaleString()}</Td>
+      <Td isNumeric>${(parseInt(market.resolution_bond) / 1000000).toLocaleString()}</Td>
       <Td>
         <Badge colorScheme={market.status === 'Active' ? 'green' : 'red'}>
           {market.status}
@@ -218,64 +194,66 @@ const MarketListItem = ({ market }) => {
 };
 
 const MarketsPage = () => {
-  const [markets, setMarkets] = useState<Market[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [isListView, setIsListView] = useState(false);
-
-  useEffect(() => {
+    const [markets, setMarkets] = useState<Market[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState('All');
+    const [isListView, setIsListView] = useState(false);
+    const [startAfter, setStartAfter] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+  
     const fetchMarkets = async () => {
       try {
         const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
         const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-
+  
+        if (!REAL_BASE_URL || !CONTRACT_ADDRESS) {
+          throw new Error("REST URL or Contract Address not defined in environment variables");
+        }
+  
         const query = {
-          query_markets_by_status: {
-            status_code: 0 // Assuming 0 is for active markets
+          markets: {
+            status: "Active",
+            start_after: startAfter,
+            limit: 10
           }
         };
         const encodedQuery = encodeQuery(query);
-
+  
         const response = await axios.get(
           `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
         );
-        setMarkets(response.data.data);
+  
+        const newMarkets = response.data.data;
+        setMarkets(newMarkets); // Replace markets instead of appending
+        setStartAfter(newMarkets[newMarkets.length - 1]?.id || 0);
+        setHasMore(newMarkets.length === 10);
         setIsLoading(false);
+  
+        console.log("Fetched markets:", newMarkets); // Debug log
       } catch (error) {
         console.error('Error fetching markets:', error);
         setError('Failed to fetch markets. Please try again later.');
         setIsLoading(false);
       }
     };
-
-    fetchMarkets();
-  }, []);
-
-  const filteredMarkets = markets.filter(market => 
-    market.question.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (activeCategory === 'All' || market.category === activeCategory)
-  );
-
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const textColor = useColorModeValue('gray.700', 'gray.200');
-
-  if (isLoading) {
-    return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
-        <Spinner size="xl" color="blue.500" thickness="4px" />
-      </Box>
+  
+    useEffect(() => {
+      fetchMarkets();
+    }, []);
+  
+    const loadMore = () => {
+      fetchMarkets();
+    };
+  
+    const filteredMarkets = markets.filter(market => 
+      market.question.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (activeCategory === 'All' || market.category.toLowerCase() === activeCategory.toLowerCase())
     );
-  }
-
-  if (error) {
-    return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
-        <Text color="red.500" fontSize="xl" fontWeight="bold">{error}</Text>
-      </Box>
-    );
-  }
+  
+    const bgColor = useColorModeValue('gray.50', 'gray.900');
+    const textColor = useColorModeValue('gray.700', 'gray.200');
 
   return (
     <Box bg={bgColor} minHeight="100vh" py={12}>
@@ -317,77 +295,96 @@ const MarketsPage = () => {
             </HStack>
           </Flex>
 
-          <Tabs variant="soft-rounded" colorScheme="blue" onChange={(index) => setActiveCategory(['All', 'Politics', 'Crypto', 'Sports', 'Pop Culture', 'Business', 'Science'][index])}>
+          <Tabs 
+            variant="soft-rounded" 
+            colorScheme="blue" 
+            onChange={(index) => setActiveCategory(['All', 'Sports', 'Politics', 'Entertainment', 'Technology', 'Finance', 'Other'][index])}
+          >
             <TabList overflowX="auto" py={2} mb={6}>
               <Tab>All</Tab>
-              <Tab>Politics</Tab>
-              <Tab>Crypto</Tab>
               <Tab>Sports</Tab>
-              <Tab>Pop Culture</Tab>
-              <Tab>Business</Tab>
-              <Tab>Science</Tab>
+              <Tab>Politics</Tab>
+              <Tab>Entertainment</Tab>
+              <Tab>Technology</Tab>
+              <Tab>Finance</Tab>
+              <Tab>Other</Tab>
             </TabList>
           </Tabs>
 
-          {isListView ? (
-            <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Market</Th>
-                  <Th isNumeric>Volume</Th>
-                  <Th>Status</Th>
-                  <Th>Time Remaining</Th>
-                  <Th>Action</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {filteredMarkets.map(market => (
-                  <MarketListItem key={market.id} market={market} />
-                ))}
-              </Tbody>
-            </Table>
-          ) : (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
-              <AnimatePresence>
-                {filteredMarkets.map(market => (
-                  <MotionBox
-                    key={market.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <MarketCard market={market} />
-                  </MotionBox>
-                ))}
-              </AnimatePresence>
-            </SimpleGrid>
-          )}
-
-          {filteredMarkets.length === 0 && (
-            <Text textAlign="center" color={textColor} fontSize="xl">
-              No markets found matching your criteria.
-            </Text>
-          )}
-
-          {filteredMarkets.length > 0 && (
-            <Flex justify="center" mt={12}>
-              <Button
-                as={motion.button}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                colorScheme="blue"
-                size="lg"
-                borderRadius="full"
-                px={8}
-                bgGradient="linear(to-r, blue.400, purple.500)"
-                _hover={{
-                  bgGradient: "linear(to-r, blue.500, purple.600)",
-                }}
-              >
-                Load More
-              </Button>
+          {isLoading && markets.length === 0 ? (
+            <Flex justify="center" align="center" height="200px">
+              <Spinner size="xl" color="blue.500" thickness="4px" />
             </Flex>
+          ) : error ? (
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              {error}
+            </Alert>
+          ) : (
+            <>
+              {isListView ? (
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Market</Th>
+                      <Th isNumeric>Volume</Th>
+                      <Th>Status</Th>
+                      <Th>Time Remaining</Th>
+                      <Th>Action</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {filteredMarkets.map(market => (
+                      <MarketListItem key={market.id} market={market} />
+                    ))}
+                  </Tbody>
+                </Table>
+              ) : (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8} minHeight="400px">
+                  <AnimatePresence>
+                    {filteredMarkets.map(market => (
+                      <MotionBox
+                        key={market.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <MarketCard market={market} />
+                      </MotionBox>
+                    ))}
+                  </AnimatePresence>
+                </SimpleGrid>
+              )}
+
+{filteredMarkets.length === 0 && (
+                <Text textAlign="center" color={textColor} fontSize="xl">
+                  No markets found matching your criteria.
+                </Text>
+              )}
+
+              {hasMore && (
+                <Flex justify="center" mt={12}>
+                  <Button
+                    onClick={loadMore}
+                    as={motion.button}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    colorScheme="blue"
+                    size="lg"
+                    borderRadius="full"
+                    px={8}
+                    bgGradient="linear(to-r, blue.400, purple.500)"
+                    _hover={{
+                      bgGradient: "linear(to-r, blue.500, purple.600)",
+                    }}
+                    isLoading={isLoading}
+                  >
+                    Load More
+                  </Button>
+                </Flex>
+              )}
+            </>
           )}
         </VStack>
       </Container>
