@@ -198,8 +198,8 @@ const MyBetsPage = () => {
     fetchData();
   }, [toast, isWalletConnected, walletAddress, startAfter]);
 
-  const activeOrders = orders.filter(order => order.status === 'Open');
-  const pastOrders = orders.filter(order => order.status !== 'Open');
+  const activeOrders = orders.filter(order => order.status === 'Open' || order.status === 'PartiallyFilled');
+  const pastOrders = orders.filter(order => order.status !== 'Open' || order.status === 'PartiallyFilled');
 
   const totalBets = orders.length + matchedBets.length;
   const currentBalance = orders.reduce((sum, order) => sum + parseFloat(order.amount), 0) +
