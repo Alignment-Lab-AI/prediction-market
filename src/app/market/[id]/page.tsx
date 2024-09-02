@@ -232,123 +232,158 @@ const OptionsList = ({ options, onSelectOption, market, onSelectOdds }: { option
 };
 
 const BettingInterface = ({ market, selectedOption, selectedOptionIndex }: { market: Market, selectedOption: string, selectedOptionIndex: number }) => {
-  const [betAmount, setBetAmount] = useState(0);
-  const [odds, setOdds] = useState(2.00);
-  const [betType, setBetType] = useState<'back' | 'lay'>('back');
-  const [stake, setStake] = useState(0);
-  const toast = useToast();
-  const { isWalletConnected } = useWeb3();
-
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-
-  const calculatePotentialWin = () => {
-    if (betType === 'back') {
-      return (stake * odds - stake).toFixed(2);
-    } else {
-      return stake.toFixed(2);
-    }
-  };
-
-  const calculateLiability = () => {
-    if (betType === 'lay') {
-      return ((odds - 1) * stake).toFixed(2);
-    }
-    return '0.00';
-  };
-
-  const handlePlaceBet = async () => {
-    if (!isWalletConnected) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet to place a bet.",
-        status: "warning",
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
-
-    // Implement bet placement logic here
-    toast({
-      title: "Bet Placed",
-      description: `You placed a ${betType} bet of ${stake} CMDX on "${selectedOption}" at ${odds} odds.`,
-      status: "success",
-      duration: 5000,
-      isClosable: true,
-    });
-  };
-
-  return (
-    <Box
-      bg={bgColor}
-      p={6}
-      borderRadius="xl"
-      boxShadow="xl"
-    >
-      <Heading size="md" mb={4}>Betslip</Heading>
-      <VStack spacing={4} align="stretch">
-        <Text fontWeight="bold">{selectedOption}</Text>
-        <HStack>
-          <Button
-            colorScheme={betType === 'back' ? 'blue' : 'gray'}
-            onClick={() => setBetType('back')}
-          >
-            Back
+    const [betAmount, setBetAmount] = useState(0);
+    const [odds, setOdds] = useState(2.00);
+    const [betType, setBetType] = useState<'back' | 'lay'>('back');
+    const toast = useToast();
+    const { isWalletConnected } = useWeb3();
+  
+    const bgColor = useColorModeValue('white', 'gray.800');
+    const borderColor = useColorModeValue('gray.200', 'gray.600');
+  
+    const calculatePotentialWin = () => {
+      if (betType === 'back') {
+        return (betAmount * odds - betAmount).toFixed(2);
+      } else {
+        return betAmount.toFixed(2);
+      }
+    };
+  
+    const calculateLiability = () => {
+      if (betType === 'lay') {
+        return ((odds - 1) * betAmount).toFixed(2);
+      }
+      return '0.00';
+    };
+  
+    const handlePlaceBet = async () => {
+      if (!isWalletConnected) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet to place a bet.",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+        return;
+      }
+  
+      try {
+        const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+        const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+        if (!chainId || !contractAddress) {
+          throw new Error("Chain ID or Contract address not defined in environment variables");
+        }
+  
+        const msg = {
+          place_order: {
+            market_id: market.id,
+            option_id: selectedOptionIndex,
+            order_type: "limit",
+            side: betType === 'back' ? "Back" : "Lay",
+            amount: (betAmount * 1000000).toString(), // Convert to ucmdx
+            odds: Math.round(odds * 100) // Convert to integer representation
+          }
+        };
+  
+        // Calculate the amount to be sent
+        const amountToSend = betType === 'back' ? betAmount : parseFloat(calculateLiability());
+        const funds = [{ denom: "ucmdx", amount: (amountToSend * 1000000).toString() }];
+  
+        console.log("Placing bet:", JSON.stringify(msg, null, 2));
+  
+        const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+  
+        console.log("Bet placed successfully:", result);
+  
+        toast({
+          title: "Bet Placed",
+          description: `You placed a ${betType} bet of ${betAmount} CMDX on "${selectedOption}" at ${odds} odds. Transaction hash: ${result.transactionHash}`,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      } catch (err) {
+        console.error("Error placing bet:", err);
+        toast({
+          title: "Error",
+          description: "Failed to place bet. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    };
+  
+    return (
+      <Box
+        bg={bgColor}
+        p={6}
+        borderRadius="xl"
+        boxShadow="xl"
+      >
+        <Heading size="md" mb={4}>Betslip</Heading>
+        <VStack spacing={4} align="stretch">
+          <Text fontWeight="bold">{selectedOption}</Text>
+          <HStack>
+            <Button
+              colorScheme={betType === 'back' ? 'blue' : 'gray'}
+              onClick={() => setBetType('back')}
+            >
+              Back
+            </Button>
+            <Button
+              colorScheme={betType === 'lay' ? 'red' : 'gray'}
+              onClick={() => setBetType('lay')}
+            >
+              Lay
+            </Button>
+          </HStack>
+          <FormControl>
+            <FormLabel>Odds</FormLabel>
+            <NumberInput
+              value={odds}
+              onChange={(valueString) => setOdds(Number(valueString))}
+              step={0.01}
+              precision={2}
+              min={1.01}
+            >
+              <NumberInputField />
+              <NumberInputStepper>
+                <NumberIncrementStepper />
+                <NumberDecrementStepper />
+              </NumberInputStepper>
+            </NumberInput>
+          </FormControl>
+          <FormControl>
+            <FormLabel>{betType === 'back' ? 'Stake' : 'Liability'}</FormLabel>
+            <NumberInput
+              value={betAmount}
+              onChange={(valueString) => setBetAmount(Number(valueString))}
+              min={0}
+            >
+              <NumberInputField />
+              <NumberInputStepper>
+                <NumberIncrementStepper />
+                <NumberDecrementStepper />
+              </NumberInputStepper>
+            </NumberInput>
+          </FormControl>
+          <Box borderWidth={1} borderRadius="md" p={3}>
+            <Text fontWeight="semibold">
+              {betType === 'back' ? 'Potential profit:' : 'Potential liability:'}
+            </Text>
+            <Text fontSize="xl" fontWeight="bold" color={betType === 'back' ? 'green.500' : 'red.500'}>
+              {betType === 'back' ? calculatePotentialWin() : calculateLiability()} CMDX
+            </Text>
+          </Box>
+          <Button colorScheme={betType === 'back' ? 'blue' : 'red'} size="lg" onClick={handlePlaceBet}>
+            Place Bet
           </Button>
-          <Button
-            colorScheme={betType === 'lay' ? 'red' : 'gray'}
-            onClick={() => setBetType('lay')}
-          >
-            Lay
-          </Button>
-        </HStack>
-        <FormControl>
-          <FormLabel>Odds</FormLabel>
-          <NumberInput
-            value={odds}
-            onChange={(valueString) => setOdds(Number(valueString))}
-            step={0.01}
-            precision={2}
-            min={1.01}
-          >
-            <NumberInputField />
-            <NumberInputStepper>
-              <NumberIncrementStepper />
-              <NumberDecrementStepper />
-            </NumberInputStepper>
-          </NumberInput>
-        </FormControl>
-        <FormControl>
-          <FormLabel>{betType === 'back' ? 'Stake' : 'Liability'}</FormLabel>
-          <NumberInput
-            value={stake}
-            onChange={(valueString) => setStake(Number(valueString))}
-            min={0}
-          >
-            <NumberInputField />
-            <NumberInputStepper>
-              <NumberIncrementStepper />
-              <NumberDecrementStepper />
-            </NumberInputStepper>
-          </NumberInput>
-        </FormControl>
-        <Box borderWidth={1} borderRadius="md" p={3}>
-          <Text fontWeight="semibold">
-            {betType === 'back' ? 'Potential profit:' : 'Potential liability:'}
-          </Text>
-          <Text fontSize="xl" fontWeight="bold" color={betType === 'back' ? 'green.500' : 'red.500'}>
-            {betType === 'back' ? calculatePotentialWin() : calculateLiability()} CMDX
-          </Text>
-        </Box>
-        <Button colorScheme={betType === 'back' ? 'blue' : 'red'} size="lg" onClick={handlePlaceBet}>
-          Place Bet
-        </Button>
-      </VStack>
-    </Box>
-  );
-};
-
+        </VStack>
+      </Box>
+    );
+  };
 const CommentSection = () => {
   const [comments, setComments] = useState<Comment[]>([
     { id: 1, author: 'User1', content: 'I think this market will close positively!', sentiment: 'positive', likes: 5, dislikes: 1 },
