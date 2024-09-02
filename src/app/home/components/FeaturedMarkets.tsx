@@ -30,25 +30,6 @@ const MotionHeading = motion(Heading);
 const MotionText = motion(Text);
 const MotionButton = motion(Button);
 
-const formatTime = (timestamp) => {
-  const date = new Date(parseInt(timestamp) * 1000);
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-};
-
-const getTimeRemaining = (endTime) => {
-  const now = Math.floor(Date.now() / 1000);
-  const timeLeft = parseInt(endTime) - now;
-  
-  if (timeLeft <= 0) return `Ended on ${formatTime(endTime)}`;
-  
-  const days = Math.floor(timeLeft / 86400);
-  const hours = Math.floor((timeLeft % 86400) / 3600);
-  
-  if (days > 0) return `${days} days remaining`;
-  if (hours > 0) return `${hours} hours remaining`;
-  return `Ending soon`;
-};
-
 const GlassBox = chakra(Box, {
   baseStyle: {
     backdropFilter: 'blur(10px)',
@@ -61,21 +42,34 @@ const GlassBox = chakra(Box, {
   },
 });
 
-const MarketCard = ({ market, config }) => {
+const getTimeRemaining = (endTime) => {
+  const now = Math.floor(Date.now() / 1000);
+  const timeLeft = parseInt(endTime) - now;
+  
+  if (timeLeft <= 0) return 'Ended';
+  
+  const days = Math.floor(timeLeft / 86400);
+  const hours = Math.floor((timeLeft % 86400) / 3600);
+  
+  if (days > 0) return `${days} days remaining`;
+  if (hours > 0) return `${hours} hours remaining`;
+  return 'Ending soon';
+};
+
+const MarketCard = ({ market }) => {
   const controls = useAnimation();
   const [isHovered, setIsHovered] = React.useState(false);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.700', 'white');
   const mutedTextColor = useColorModeValue('gray.600', 'gray.400');
-  const cardBg = useColorModeValue('gray.50', 'gray.700');
+  const cardBg = useColorModeValue('gray.50', 'white');
 
   React.useEffect(() => {
     controls.start({ opacity: 1, y: 0 });
   }, [controls]);
 
   const timeInfo = getTimeRemaining(market.end_time);
-  const isActive = market.status === 'Active';
 
   return (
     <Link href={`/market/${market.id}`} passHref>
@@ -149,11 +143,11 @@ const MarketCard = ({ market, config }) => {
               <HStack>
                 <Icon as={FaCoins} color="yellow.500" />
                 <Text fontSize="sm" fontWeight="bold" color={textColor}>
-                  {(parseInt(market.collateral_amount) / 1000000).toLocaleString()} CMDX
+                  {(parseInt(market.resolution_bond) / 1000000).toLocaleString()} CMDX
                 </Text>
               </HStack>
-              <Badge colorScheme={isActive ? 'green' : 'red'} variant="subtle" borderRadius="full" px={2}>
-                {market.status}
+              <Badge colorScheme="green" variant="subtle" borderRadius="full" px={2}>
+                Active
               </Badge>
             </HStack>
             <MotionButton
@@ -186,14 +180,13 @@ const MarketCard = ({ market, config }) => {
 };
 
 export default function FeaturedMarkets() {
-  const { config } = useGlobalContext();
   const [markets, setMarkets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const controls = useAnimation();
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const headingColor = useColorModeValue('gray.800', 'white');
+  const headingColor = useColorModeValue('gray.800', 'white'); // Changed this line
 
   useEffect(() => {
     const fetchMarkets = async () => {
@@ -202,8 +195,10 @@ export default function FeaturedMarkets() {
         const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   
         const query = {
-          query_markets_by_status: {
-            status_code: 0 // Assuming 0 is for active markets
+          markets: {
+            status: "Active",
+            start_after: 0,
+            limit: 3
           }
         };
         const encodedQuery = encodeQuery(query);
@@ -227,80 +222,54 @@ export default function FeaturedMarkets() {
     controls.start({ opacity: 1, y: 0 });
   }, [controls]);
 
-//   if (isLoading) {
-//     return (
-//       <Box display="flex" justifyContent="center" alignItems="center" height="300px">
-//         <Spinner size="xl" color="blue.500" />
-//       </Box>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <Box textAlign="center" color="red.500">
-//         <Text>{error}</Text>
-//       </Box>
-//     );
-//   }
-
-  if (!markets || markets.length === 0) {
+  if (isLoading) {
     return (
-      <Box>
-        <MotionHeading
-          as="h2"
-          size="2xl"
-          mb={10}
-          textAlign="center"
-          bgGradient="linear(to-r, blue.400, purple.500, pink.500)"
-          bgClip="text"
-          initial={{ opacity: 0, y: -20 }}
-          animate={controls}
-          transition={{ duration: 0.5 }}
-        >
-          Featured Markets
-        </MotionHeading>
-        <MotionText
-          textAlign="center"
-          color="gray.600"
-          initial={{ opacity: 0 }}
-          animate={controls}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          No markets available at the moment.
-        </MotionText>
+      <Box display="flex" justifyContent="center" alignItems="center" height="300px">
+        <Spinner size="xl" color="blue.500" />
       </Box>
     );
   }
 
+  // Even if there's an error or no markets, we'll still render the component
+  // This ensures the homepage doesn't break
   return (
     <Box py={20} bg={bgColor}>
-      <MotionHeading
+       <MotionHeading
         as="h2"
         size="2xl"
         mb={10}
         textAlign="center"
-        color={headingColor}
-        bgGradient="linear(to-r, blue.400, purple.500, pink.500)"
+        bgGradient="linear(to-r, blue.400, purple.500)"
         bgClip="text"
         fontWeight="extrabold"
         initial={{ opacity: 0, y: -20 }}
-        animate={controls}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-      >
+        >
         Featured Markets
-      </MotionHeading>
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
-        {markets.slice(0, 3).map((market, index) => (
-          <MotionBox
-            key={market.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
-          >
-            <MarketCard market={market} config={config} />
-          </MotionBox>
-        ))}
-      </SimpleGrid>
+        </MotionHeading>
+      {error ? (
+        <Text textAlign="center" color="gray.600">
+          {error}
+        </Text>
+      ) : markets.length === 0 ? (
+        <Text textAlign="center" color="gray.600">
+          No markets available at the moment.
+        </Text>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
+          {markets.map((market, index) => (
+            <MotionBox
+              key={market.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+            >
+              <MarketCard market={market} />
+            </MotionBox>
+          ))}
+        </SimpleGrid>
+      )}
     </Box>
   );
 }

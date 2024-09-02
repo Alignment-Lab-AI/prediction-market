@@ -1,11 +1,12 @@
 // src/app/home/components/Stats.tsx
 'use client';
 
-import React from 'react';
-import { SimpleGrid, Box, Text, VStack, Icon, useColorModeValue } from '@chakra-ui/react';
+import React, { useState, useEffect } from 'react';
+import { SimpleGrid, Box, Text, VStack, Icon, useColorModeValue, Spinner } from '@chakra-ui/react';
 import { motion, useAnimation } from 'framer-motion';
 import { FaChartLine, FaCoins, FaUsers, FaTrophy } from 'react-icons/fa';
-import { useGlobalContext } from '../../../contexts/GlobalContext';
+import axios from 'axios';
+import { encodeQuery } from '../../../utils/queryUtils';
 
 const MotionBox = motion(Box);
 const MotionText = motion(Text);
@@ -106,11 +107,66 @@ const StatCard = ({ icon, label, value, color }) => {
 };
 
 export default function Stats() {
-  const { markets } = useGlobalContext();
+  const [stats, setStats] = useState({
+    totalMarkets: 0,
+    totalVolume: 0,
+    activeUsers: 0,
+    totalRewards: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const totalMarkets = markets.length;
-  const totalVolume = markets.reduce((sum, market) =>
-    sum + parseInt(market.collateral_amount), 0);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+        const query = {
+          markets: {
+            status: "Active",
+            start_after: 0,
+            limit: 100 // Adjust this number as needed
+          }
+        };
+        const encodedQuery = encodeQuery(query);
+
+        const response = await axios.get(
+          `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
+        );
+
+        const markets = response.data.data;
+        const totalMarkets = markets.length;
+        const totalVolume = markets.reduce((sum, market) => sum + parseInt(market.resolution_bond), 0);
+        
+        // Note: Active users and total rewards might need to be calculated differently
+        // depending on your contract's structure. These are placeholder calculations.
+        const activeUsers = new Set(markets.map(market => market.creator)).size;
+        const totalRewards = markets.reduce((sum, market) => sum + parseInt(market.resolution_reward), 0);
+
+        setStats({
+          totalMarkets,
+          totalVolume,
+          activeUsers,
+          totalRewards,
+        });
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="300px">
+        <Spinner size="xl" color="blue.500" />
+      </Box>
+    );
+  }
 
   return (
     <Box py={20}>
@@ -118,25 +174,25 @@ export default function Stats() {
         <StatCard
           icon={FaChartLine}
           label="Total Markets"
-          value={totalMarkets}
+          value={stats.totalMarkets}
           color="blue.500"
         />
         <StatCard
           icon={FaCoins}
           label={`Total Volume`}
-          value={(totalVolume / 1000000).toFixed(2)}
+          value={(stats.totalVolume / 1000000).toFixed(2)}
           color="yellow.500"
         />
         <StatCard
           icon={FaUsers}
           label="Active Users"
-          value={1234}
+          value={stats.activeUsers}
           color="green.500"
         />
         <StatCard
           icon={FaTrophy}
           label="Total Rewards"
-          value={(totalVolume / 20000000).toFixed(2)}
+          value={(stats.totalRewards / 1000000).toFixed(2)}
           color="purple.500"
         />
       </SimpleGrid>

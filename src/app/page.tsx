@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Center, Spinner, Alert, AlertIcon, Button } from '@chakra-ui/react';
+import { Box, Container, Center, Spinner } from '@chakra-ui/react';
 import { useGlobalContext } from '../contexts/GlobalContext';
 import Hero from './home/components/Hero';
 import Stats from './home/components/Stats';
@@ -11,7 +11,7 @@ import WhyUs from './home/components/WhyUs';
 import CallToAction from './home/components/CallToAction';
 
 export default function Home() {
-  const { isInitialLoading, isRefreshing, error, refreshData } = useGlobalContext();
+  const { isInitialLoading } = useGlobalContext();
 
   if (isInitialLoading) {
     return (
@@ -24,33 +24,23 @@ export default function Home() {
   return (
     <Box bg="gray.50" minHeight="100vh">
       <Container maxW="container.xl" py={20}>
-        {error && (
-          <Alert status="error" mb={4}>
-            <AlertIcon />
-            {error}
-            <Button ml={4} onClick={refreshData} isLoading={isRefreshing}>
-              Retry
-            </Button>
-          </Alert>
-        )}
-        
-        <Box mb={0}>  {/* Adjust this value to change space after Hero */}
+        <Box mb={0}>
           <Hero />
         </Box>
 
-        <Box mb={0}>  {/* Adjust this value to change space after Stats */}
+        <Box mb={0}>
           <Stats />
         </Box>
 
-        <Box mb={0}>  {/* Adjust this value to change space after FeaturedMarkets */}
+        <Box mb={0}>
           <FeaturedMarkets />
         </Box>
 
-        <Box mb={0}>  {/* Adjust this value to change space after WhyUs */}
+        <Box mb={0}>
           <WhyUs />
         </Box>
 
-        <Box mb={0}>  {/* Adjust this value to change space after CallToAction */}
+        <Box mb={0}>
           <CallToAction />
         </Box>
       </Container>

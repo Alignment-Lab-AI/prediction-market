@@ -49,8 +49,9 @@ import {
   Input,
   FormControl,
   FormLabel,
+  Tooltip,
 } from '@chakra-ui/react';
-import { FaWallet, FaChartBar, FaHistory, FaBell, FaTrophy, FaExchangeAlt, FaUserShield, FaEdit } from 'react-icons/fa';
+import { FaWallet, FaChartBar, FaHistory, FaBell, FaTrophy, FaExchangeAlt, FaUserShield, FaEdit, FaInfoCircle } from 'react-icons/fa';
 import axios from 'axios';
 import NextLink from 'next/link';
 import { motion } from 'framer-motion';
@@ -89,16 +90,28 @@ interface UserProfile {
   avatar: string;
 }
 
-interface Bet {
+interface Order {
   id: number;
-  bettor: string;
   market_id: number;
-  option_index: number;
-  position: string;
+  creator: string;
+  option_id: number;
+  side: 'Back' | 'Lay';
   amount: string;
-  matched_amount: string;
-  unmatched_amount: string;
-  odds: string;
+  odds: number;
+  filled_amount: string;
+  status: string;
+  timestamp: number;
+}
+
+interface MatchedBet {
+  id: number;
+  market_id: number;
+  option_id: number;
+  amount: string;
+  odds: number;
+  timestamp: number;
+  back_user: string;
+  lay_user: string;
   redeemed: boolean;
 }
 
@@ -168,7 +181,7 @@ const EditProfileModal = ({ isOpen, onClose, userProfile, onSave }) => {
 const UserProfilePage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: "Crypto Enthusiast",
-    walletAddress: "comdex1nh4gxgzq7hw8fvtkxjg4kpfqmsq65szqxxdqye",
+    walletAddress: "",
     balance: 0,
     totalBets: 0,
     wonBets: 0,
@@ -176,7 +189,8 @@ const UserProfilePage = () => {
     winRate: 0,
     avatar: "https://bit.ly/broken-link",
   });
-  const [bets, setBets] = useState<Bet[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [matchedBets, setMatchedBets] = useState<MatchedBet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notificationSettings, setNotificationSettings] = useState({
     email: true,
@@ -188,7 +202,7 @@ const UserProfilePage = () => {
   const { isWalletConnected, walletAddress } = useWeb3();
 
   const bgColor = useColorModeValue("gray.50", "gray.900");
-  const cardBgColor = useColorModeValue("rgba(255, 255, 255, 0.8)", "rgba(26, 32, 44, 0.8)");
+  const cardBgColor = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const accentColor = "blue.400";
@@ -212,23 +226,42 @@ const UserProfilePage = () => {
         const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
         const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
-        const query = {
-          query_user_bets: {
-            user_addr: walletAddress
+        if (!REAL_BASE_URL || !CONTRACT_ADDRESS) {
+          throw new Error("REST URL or Contract Address not defined in environment variables");
+        }
+
+        const orderQuery = {
+          user_orders: {
+            user: walletAddress,
+            start_after: 0,
+            limit: 100
           }
         };
-        const encodedQuery = encodeQuery(query);
+        const encodedOrderQuery = encodeQuery(orderQuery);
+        
+        const matchedBetQuery = {
+          matched_bets: {
+            user: walletAddress,
+            start_after: 0,
+            limit: 100
+          }
+        };
+        const encodedMatchedBetQuery = encodeQuery(matchedBetQuery);
 
-        const betsResponse = await axios.get(
-          `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
-        );
-        setBets(betsResponse.data.data);
+        const [orderResponse, matchedBetResponse] = await Promise.all([
+          axios.get(`${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedOrderQuery}`),
+          axios.get(`${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedMatchedBetQuery}`)
+        ]);
 
-        const totalBets = betsResponse.data.data.length;
-        const wonBets = betsResponse.data.data.filter(bet => bet.redeemed).length;
+        setOrders(orderResponse.data.data);
+        setMatchedBets(matchedBetResponse.data.data);
+
+        const totalBets = orderResponse.data.data.length + matchedBetResponse.data.data.length;
+        const wonBets = matchedBetResponse.data.data.filter(bet => bet.redeemed).length;
         const lostBets = totalBets - wonBets;
         const winRate = totalBets > 0 ? (wonBets / totalBets) * 100 : 0;
-        const balance = betsResponse.data.data.reduce((acc, bet) => acc + parseFloat(bet.amount), 0) / 1000000;
+        const balance = orderResponse.data.data.reduce((acc, order) => acc + parseFloat(order.amount), 0) +
+                        matchedBetResponse.data.data.reduce((acc, bet) => acc + parseFloat(bet.amount), 0);
 
         setUserProfile(prev => ({
           ...prev,
@@ -237,7 +270,7 @@ const UserProfilePage = () => {
           wonBets,
           lostBets,
           winRate,
-          balance,
+          balance: balance / 1000000, // Convert to CMDX
         }));
 
       } catch (err) {
@@ -295,7 +328,7 @@ const UserProfilePage = () => {
       <Box bg={bgColor} minHeight="100vh" py={12}>
         <Container maxW="container.xl">
           <VStack spacing={10} align="stretch">
-          <MotionBox
+            <MotionBox
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -369,7 +402,7 @@ const UserProfilePage = () => {
                 >
                   <Stat 
                     px={6} 
-                    py={8} 
+                    py={8}
                     bg={cardBgColor}
                     backdropFilter="blur(10px)"
                     borderRadius="2xl" 
@@ -440,48 +473,115 @@ const UserProfilePage = () => {
                       borderColor={borderColor}
                     >
                       <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Betting History</Heading>
-                      <Table variant="simple">
-                        <Thead>
-                          <Tr>
-                            <Th>Market ID</Th>
-                            <Th>Amount</Th>
-                            <Th>Matched</Th>
-                            <Th>Unmatched</Th>
-                            <Th>Odds</Th>
-                            <Th>Position</Th>
-                            <Th>Status</Th>
-                          </Tr>
-                        </Thead>
-                        <Tbody>
-                          {bets.map((bet) => {
-                            const totalAmount = parseFloat(bet.amount);
-                            const matchedAmount = parseFloat(bet.matched_amount);
-                            const unmatchedAmount = totalAmount - matchedAmount;
-
-                            return (
-                              <Tr key={bet.id}>
-                                <Td>{bet.market_id}</Td>
-                                <Td>{(totalAmount / 1000000).toFixed(2)} CMDX</Td>
-                                <Td>{(matchedAmount / 1000000).toFixed(2)} CMDX</Td>
-                                <Td>{(unmatchedAmount / 1000000).toFixed(2)} CMDX</Td>
-                                <Td>{bet.odds}</Td>
-                                <Td>{bet.position}</Td>
-                                <Td>
-                                  <Badge 
-                                    colorScheme={bet.redeemed ? 'green' : 'yellow'} 
-                                    borderRadius="full" 
-                                    px={3} 
-                                    py={1}
-                                    textTransform="capitalize"
-                                  >
-                                    {bet.redeemed ? 'Redeemed' : 'Active'}
-                                  </Badge>
-                                </Td>
-                              </Tr>
-                            );
-                          })}
-                        </Tbody>
-                      </Table>
+                      <Tabs>
+                        <TabList>
+                          <Tab>Active Orders</Tab>
+                          <Tab>Matched Bets</Tab>
+                          <Tab>Past Orders</Tab>
+                        </TabList>
+                        <TabPanels>
+                          <TabPanel>
+                            <Table variant="simple">
+                              <Thead>
+                                <Tr>
+                                  <Th>Market ID</Th>
+                                  <Th>Side</Th>
+                                  <Th>Amount</Th>
+                                  <Th>Odds</Th>
+                                  <Th>Filled Amount</Th>
+                                  <Th>Status</Th>
+                                </Tr>
+                              </Thead>
+                              <Tbody>
+                                {orders.filter(order => order.status === 'Open' || order.status === 'PartiallyFilled').map((order) => (
+                                  <Tr key={order.id}>
+                                    <Td>{order.market_id}</Td>
+                                    <Td>
+                                      <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                                        {order.side}
+                                      </Badge>
+                                    </Td>
+                                    <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                    <Td>{(order.odds / 100).toFixed(2)}</Td>
+                                    <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                                    <Td>
+                                      <Badge colorScheme={order.status === 'Open' ? 'green' : 'yellow'}>
+                                        {order.status}
+                                      </Badge>
+                                    </Td>
+                                  </Tr>
+                                ))}
+                              </Tbody>
+                            </Table>
+                          </TabPanel>
+                          <TabPanel>
+                            <Table variant="simple">
+                              <Thead>
+                                <Tr>
+                                  <Th>Market ID</Th>
+                                  <Th>Amount</Th>
+                                  <Th>Odds</Th>
+                                  <Th>Role</Th>
+                                  <Th>Status</Th>
+                                </Tr>
+                              </Thead>
+                              <Tbody>
+                                {matchedBets.map((bet) => (
+                                  <Tr key={bet.id}>
+                                    <Td>{bet.market_id}</Td>
+                                    <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                    <Td>{(bet.odds / 100).toFixed(2)}</Td>
+                                    <Td>
+                                      <Badge colorScheme={bet.back_user === walletAddress ? 'green' : 'red'}>
+                                        {bet.back_user === walletAddress ? 'Back' : 'Lay'}
+                                      </Badge>
+                                    </Td>
+                                    <Td>
+                                      <Badge colorScheme={bet.redeemed ? 'green' : 'yellow'}>
+                                        {bet.redeemed ? 'Redeemed' : 'Active'}
+                                      </Badge>
+                                    </Td>
+                                  </Tr>
+                                ))}
+                              </Tbody>
+                            </Table>
+                          </TabPanel>
+                          <TabPanel>
+                            <Table variant="simple">
+                              <Thead>
+                                <Tr>
+                                  <Th>Market ID</Th>
+                                  <Th>Side</Th>
+                                  <Th>Amount</Th>
+                                  <Th>Odds</Th>
+                                  <Th>Filled Amount</Th>
+                                  <Th>Status</Th>
+                                </Tr>
+                              </Thead>
+                              <Tbody>
+                                {orders.filter(order => order.status !== 'Open' && order.status !== 'PartiallyFilled').map((order) => (
+                                  <Tr key={order.id}>
+                                    <Td>{order.market_id}</Td>
+                                    <Td>
+                                      <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                                        {order.side}
+                                      </Badge>
+                                    </Td>
+                                    <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                    <Td>{(order.odds / 100).toFixed(2)}</Td>
+                                    <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                                    <Td>
+                                      <Badge colorScheme={order.status === 'Filled' ? 'green' : 'red'}>
+                                        {order.status}
+                                      </Badge>
+                                    </Td>
+                                  </Tr>
+                                ))}
+                              </Tbody>
+                            </Table>
+                          </TabPanel>
+                        </TabPanels>
+                      </Tabs>
                     </Box>
                   </TabPanel>
                   <TabPanel>
@@ -515,6 +615,34 @@ const UserProfilePage = () => {
                   </TabPanel>
                 </TabPanels>
               </Tabs>
+            </MotionBox>
+
+            <MotionBox
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.6 }}
+            >
+              <Box bg={cardBgColor} borderRadius="xl" boxShadow="xl" p={6}>
+                <Heading size="md" mb={4}>Understanding Your Profile</Heading>
+                <VStack align="start" spacing={4}>
+                  <HStack>
+                    <Icon as={FaInfoCircle} color="blue.500" />
+                    <Text><strong>Wallet Balance:</strong> This is your current balance in CMDX tokens.</Text>
+                  </HStack>
+                  <HStack>
+                    <Icon as={FaInfoCircle} color="purple.500" />
+                    <Text><strong>Total Bets:</strong> The total number of bets you've placed, including active and past bets.</Text>
+                  </HStack>
+                  <HStack>
+                    <Icon as={FaInfoCircle} color="yellow.500" />
+                    <Text><strong>Win Rate:</strong> Your success rate in predictions, calculated from your won and lost bets.</Text>
+                  </HStack>
+                  <HStack>
+                    <Icon as={FaInfoCircle} color="green.500" />
+                    <Text><strong>Profit/Loss:</strong> Your overall performance in CMDX tokens, considering all your bets.</Text>
+                  </HStack>
+                </VStack>
+              </Box>
             </MotionBox>
           </VStack>
         </Container>
