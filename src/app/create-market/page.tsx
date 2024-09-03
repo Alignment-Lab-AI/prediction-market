@@ -591,7 +591,7 @@ return (
                     </Button>
                   ) : (
                     <Button
-                      type="submit"
+                      onClick={handleSubmit(onSubmit)}
                       isLoading={isSubmitting}
                       loadingText="Creating"
                       bgGradient={gradientColor}
