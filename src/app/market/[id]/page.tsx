@@ -602,7 +602,7 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      bg={bgColor}
+      bg="transparent"
       borderRadius="xl"
       boxShadow="xl"
       p={6}
@@ -699,7 +699,7 @@ const CommentSection = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   return (
-    <Box bg={bgColor} p={6} borderRadius="xl" boxShadow="xl" mt={8}>
+    <Box bg="transparent" p={6} borderRadius="xl" boxShadow="xl" mt={8}>
       <Heading size="md" mb={4}>Market Sentiment</Heading>
       <VStack spacing={4} align="stretch">
         {comments.map((comment) => (
@@ -832,7 +832,7 @@ const MarketContent = ({ id }: { id: string }) => {
   }
 
   return (
-    <Box bg={bgColor} minHeight="100vh">
+    <Box bg="transparent" minHeight="100vh">
       <Container maxW="container.xl" py={12}>
         <Flex gap={8} flexDirection={{ base: 'column', lg: 'row' }}>
           {/* Left Column - Main Content */}

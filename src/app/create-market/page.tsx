@@ -480,11 +480,9 @@ const inputBorderColor = useColorModeValue("gray.200", "gray.600");
 
 return (
   <Box
-    bg={bgColor}
+    bg="transparent"
     minHeight="100vh"
     py={8}
-    backgroundImage="url('https://www.transparenttextures.com/patterns/cubes.png')"
-    backgroundAttachment="fixed"
   >
     <Container maxW="container.md">
       <VStack spacing={8} align="stretch">

@@ -8,6 +8,7 @@ import { Web3Provider } from '../contexts/Web3Context';
 import { GlobalProvider } from '../contexts/GlobalContext';
 import Header from '../components/Header'
 import Footer from '../components/Footer'
+import ProbabilityStreams from '../components/ProbabilityStreams';
 
 const GlobalStyles = () => (
   <Global
@@ -20,22 +21,23 @@ const GlobalStyles = () => (
       #__next {
         height: 100%;
       }
+      body {
+        color: rgba(0, 0, 0, 0.8);
+        background-color: white;
+      }
     `}
   />
 );
 
 const BackgroundWrapper = ({ children }: { children: React.ReactNode }) => {
-  const bgColor = useColorModeValue("gray.50", "gray.900");
   return (
     <Box
       minHeight="100vh"
-      bg={bgColor}
-      backgroundImage="url('https://www.transparenttextures.com/patterns/cubes.png')"
-      backgroundAttachment="fixed"
-      backgroundRepeat="repeat"
+      bg="white"
       position="relative"
       zIndex={0}
     >
+      <ProbabilityStreams />
       <Box position="relative" zIndex={1}>
         {children}
       </Box>
