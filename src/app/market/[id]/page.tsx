@@ -147,13 +147,75 @@ const MarketHeader = ({ market }: { market: Market }) => {
   );
 };
 
-const OrderBook = ({ selectedOption, onSelectOdds }: { selectedOption: string, onSelectOdds: (odds: number, betType: 'back' | 'lay') => void }) => {
+const OrderBook = ({ 
+  selectedOption, 
+  onSelectOdds, 
+  marketId, 
+  optionIndex 
+}: { 
+  selectedOption: string, 
+  onSelectOdds: (odds: number, betType: 'back' | 'lay') => void, 
+  marketId: number,
+  optionIndex: number
+}) => {
+  const [backOrders, setBackOrders] = useState<any[]>([]);
+  const [layOrders, setLayOrders] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const bgColor = useColorModeValue('gray.50', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'gray.100');
 
-  // Mock data for the order book
-  const backOdds = [2.0, 1.9, 1.8];
-  const layOdds = [2.1, 2.2, 2.3];
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setIsLoading(true);
+      try {
+        const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+        const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+        const query = {
+          market_orders: {
+            market_id: marketId,
+            start_after: 0,
+            limit: 100 // Increase this if you expect more orders
+          }
+        };
+
+        const encodedQuery = encodeQuery(query);
+
+        const response = await axios.get(`${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`);
+
+        const allOrders = response.data.data;
+
+        // Filter orders for the specific option
+        const filteredBackOrders = allOrders
+          .filter(order => order.side === "Back" && order.option_id === optionIndex)
+          .sort((a, b) => b.odds - a.odds);
+
+        const filteredLayOrders = allOrders
+          .filter(order => order.side === "Lay" && order.option_id === optionIndex)
+          .sort((a, b) => a.odds - b.odds);
+
+        setBackOrders(filteredBackOrders);
+        setLayOrders(filteredLayOrders);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching order book:', error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [marketId, optionIndex]);
+
+  const getBackgroundColor = (index: number, isBack: boolean) => {
+    const baseColor = isBack ? 'blue' : 'red';
+    const intensity = 100 + index * 100; // 100, 200, 300
+    return `${baseColor}.${intensity}`;
+  };
+
+  if (isLoading) {
+    return <Spinner />;
+  }
 
   return (
     <Box mt={4} bg={bgColor} borderRadius="md" p={4} boxShadow="md">
@@ -164,10 +226,23 @@ const OrderBook = ({ selectedOption, onSelectOdds }: { selectedOption: string, o
             <Box flex={1}>Amount</Box>
             <Box flex={1} textAlign="right">Back</Box>
           </Flex>
-          {backOdds.map((odds, index) => (
-            <Flex key={index} bg="blue.100" p={2} borderRadius="md" cursor="pointer" onClick={() => onSelectOdds(odds, 'back')}>
-              <Box flex={1}>{(Math.random() * 1000).toFixed(2)}</Box>
-              <Box flex={1} textAlign="right" fontWeight="bold">{odds.toFixed(2)}</Box>
+          {backOrders.slice(0, 3).map((order, index) => (
+            <Flex 
+              key={order.id} 
+              bg={getBackgroundColor(index, true)} 
+              p={2} 
+              borderRadius="md" 
+              cursor="pointer" 
+              onClick={() => onSelectOdds(order.odds / 100, 'back')}
+            >
+              <Box flex={1}>{(parseInt(order.amount) / 1000000).toFixed(2)}</Box>
+              <Box flex={1} textAlign="right" fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
+            </Flex>
+          ))}
+          {[...Array(3 - backOrders.length)].map((_, index) => (
+            <Flex key={`empty-back-${index}`} bg="gray.100" p={2} borderRadius="md">
+              <Box flex={1}>-</Box>
+              <Box flex={1} textAlign="right">-</Box>
             </Flex>
           ))}
         </VStack>
@@ -176,10 +251,23 @@ const OrderBook = ({ selectedOption, onSelectOdds }: { selectedOption: string, o
             <Box flex={1}>Lay</Box>
             <Box flex={1} textAlign="right">Amount</Box>
           </Flex>
-          {layOdds.map((odds, index) => (
-            <Flex key={index} bg="red.100" p={2} borderRadius="md" cursor="pointer" onClick={() => onSelectOdds(odds, 'lay')}>
-              <Box flex={1} fontWeight="bold">{odds.toFixed(2)}</Box>
-              <Box flex={1} textAlign="right">{(Math.random() * 1000).toFixed(2)}</Box>
+          {layOrders.slice(0, 3).map((order, index) => (
+            <Flex 
+              key={order.id} 
+              bg={getBackgroundColor(index, false)} 
+              p={2} 
+              borderRadius="md" 
+              cursor="pointer" 
+              onClick={() => onSelectOdds(order.odds / 100, 'lay')}
+            >
+              <Box flex={1} fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
+              <Box flex={1} textAlign="right">{(parseInt(order.amount) / 1000000).toFixed(2)}</Box>
+            </Flex>
+          ))}
+          {[...Array(3 - layOrders.length)].map((_, index) => (
+            <Flex key={`empty-lay-${index}`} bg="gray.100" p={2} borderRadius="md">
+              <Box flex={1}>-</Box>
+              <Box flex={1} textAlign="right">-</Box>
             </Flex>
           ))}
         </VStack>
@@ -238,7 +326,12 @@ const OptionsList = ({ options, onSelectOption, market, onSelectOdds }: { option
             </AccordionButton>
           </h2>
           <AccordionPanel pb={4}>
-            <OrderBook selectedOption={option} onSelectOdds={onSelectOdds} />
+            <OrderBook 
+              selectedOption={option} 
+              onSelectOdds={onSelectOdds} 
+              marketId={market.id}
+              optionIndex={index}
+            />
           </AccordionPanel>
         </AccordionItem>
       ))}
