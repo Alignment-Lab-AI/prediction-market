@@ -538,6 +538,11 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { walletAddress } = useWeb3();
 
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const textColor = useColorModeValue('gray.600', 'gray.400');
+  const headingColor = useColorModeValue('gray.700', 'white');
+
   const fetchRecentOrders = async () => {
     if (!walletAddress) return;
 
@@ -571,50 +576,98 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
     fetchRecentOrders();
   }, [walletAddress, marketId]);
 
-  if (isLoading) {
-    return <Spinner />;
-  }
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'open':
+        return 'green';
+      case 'filled':
+        return 'blue';
+      case 'cancelled':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
 
-  if (orders.length === 0) {
-    return <Text>No recent orders for this market.</Text>;
+  if (isLoading) {
+    return (
+      <Box textAlign="center" py={10}>
+        <Spinner size="xl" color="blue.500" thickness="4px" />
+      </Box>
+    );
   }
 
   return (
-    <Box mt={6}>
-      <Heading size="md" mb={4}>Recent Orders</Heading>
-      <Table variant="simple" size="sm">
-        <Thead>
-          <Tr>
-            <Th>Side</Th>
-            <Th>Amount</Th>
-            <Th>Odds</Th>
-            <Th>Status</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {orders.map((order) => (
-            <Tr key={order.id}>
-              <Td>{order.side}</Td>
-              <Td>{(parseInt(order.amount) / 1000000).toFixed(2)} CMDX</Td>
-              <Td>{(order.odds / 100).toFixed(2)}</Td>
-              <Td>{order.status}</Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
-      <Button
-        as={NextLink}
-        href="/my-bets"
-        mt={4}
-        leftIcon={<Icon as={FaHistory} />}
-        colorScheme="blue"
-        variant="outline"
-        size="sm"
-        borderRadius="full"
-      >
-        View All Bets
-      </Button>
-    </Box>
+    <MotionBox
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      bg={bgColor}
+      borderRadius="xl"
+      boxShadow="xl"
+      p={6}
+      border="1px solid"
+      borderColor={borderColor}
+      mt={8}
+    >
+      <VStack align="stretch" spacing={6}>
+        <HStack justify="space-between">
+          <Heading size="md" color={headingColor}>Recent Orders</Heading>
+          <Icon as={FaExchangeAlt} color="blue.500" boxSize={6} />
+        </HStack>
+        
+        {orders.length === 0 ? (
+          <Text color={textColor} textAlign="center">No recent orders for this market.</Text>
+        ) : (
+          <Table variant="simple" size="sm">
+            <Thead>
+              <Tr>
+                <Th>Side</Th>
+                <Th isNumeric>Amount</Th>
+                <Th isNumeric>Odds</Th>
+                <Th>Status</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {orders.map((order) => (
+                <Tr key={order.id}>
+                  <Td>
+                    <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                      {order.side}
+                    </Badge>
+                  </Td>
+                  <Td isNumeric>{(parseInt(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                  <Td isNumeric>{(order.odds / 100).toFixed(2)}</Td>
+                  <Td>
+                    <Badge colorScheme={getStatusColor(order.status)}>
+                      {order.status}
+                    </Badge>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        )}
+        
+        <Button
+          as={NextLink}
+          href="/my-bets"
+          leftIcon={<Icon as={FaHistory} />}
+          colorScheme="blue"
+          variant="outline"
+          size="sm"
+          borderRadius="full"
+          alignSelf="center"
+          _hover={{
+            transform: 'translateY(-2px)',
+            boxShadow: 'sm',
+          }}
+          transition="all 0.2s"
+        >
+          View All Bets
+        </Button>
+      </VStack>
+    </MotionBox>
   );
 };
 
