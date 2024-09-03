@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Flex,
@@ -8,46 +8,43 @@ import {
   Button,
   Stack,
   Collapse,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
   useColorModeValue,
-  useBreakpointValue,
   useDisclosure,
-  InputGroup,
-  Input,
-  InputRightElement,
+  Container,
   Avatar,
   Menu,
   MenuButton,
   MenuList,
   MenuItem,
   IconButton,
-  Icon,
+  Input,
   useToast,
-  Drawer,
-  DrawerBody,
-  DrawerHeader,
-  DrawerOverlay,
-  DrawerContent,
-  DrawerCloseButton,
-  VStack,
 } from '@chakra-ui/react';
-import { ChevronDownIcon, ChevronRightIcon, SearchIcon, HamburgerIcon, CopyIcon } from '@chakra-ui/icons';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
+import NextLink from 'next/link';
+import { motion } from 'framer-motion';
 import { useWeb3 } from '../contexts/Web3Context';
 
 const MotionBox = motion(Box);
-const MotionFlex = motion(Flex);
 
 export default function Header() {
-  const { isOpen, onToggle, onClose } = useDisclosure();
+  const { isOpen, onToggle } = useDisclosure();
   const { isWalletConnected, walletAddress, connectWallet, disconnectWallet } = useWeb3();
   const toast = useToast();
+  const [scrolled, setScrolled] = useState(false);
 
-  const bgColor = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.9)');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const bgColor = useColorModeValue(
+    scrolled ? 'rgba(255, 255, 255, 0.8)' : 'transparent',
+    scrolled ? 'rgba(26, 32, 44, 0.8)' : 'transparent'
+  );
   const textColor = useColorModeValue('gray.800', 'white');
 
   const copyAddress = () => {
@@ -63,88 +60,68 @@ export default function Header() {
   };
 
   return (
-    <MotionBox
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Box
+    <>
+      <Box height="76px" /> {/* Placeholder to reserve space for the header */}
+      <MotionBox
         position="fixed"
         top={0}
         left={0}
         right={0}
         zIndex={1000}
-        backdropFilter="blur(10px)"
+        transition="background-color 0.3s ease-in-out"
         bg={bgColor}
-        borderBottom={1}
-        borderStyle={'solid'}
-        borderColor={borderColor}
-        boxShadow="sm"
+        backdropFilter={scrolled ? "blur(10px)" : "none"}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
-        <Flex
-          color={textColor}
-          minH={'60px'}
-          py={{ base: 2 }}
-          px={{ base: 4 }}
-          align={'center'}
-          maxW="container.xl"
-          mx="auto"
-        >
-          <Flex flex={{ base: 1 }} justify={{ base: 'start', md: 'start' }} align="center">
-            <Link href="/" passHref>
-              <MotionFlex
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                cursor="pointer"
-              >
+        <Container maxW="container.xl">
+          <Flex
+            color={textColor}
+            minH={'60px'}
+            py={{ base: 4 }}
+            px={{ base: 4 }}
+            align={'center'}
+            justify={'space-between'}
+          >
+            <Flex align="center">
+              <NextLink href="/" passHref>
                 <Text
+                  as="span"
                   fontFamily={'heading'}
                   fontWeight="bold"
                   fontSize="2xl"
                   bgGradient="linear(to-r, blue.400, purple.500)"
                   bgClip="text"
+                  _hover={{
+                    bgGradient: "linear(to-r, blue.500, purple.600)",
+                  }}
+                  transition="all 0.3s ease-in-out"
+                  cursor="pointer"
                 >
                   PredictX
                 </Text>
-              </MotionFlex>
-            </Link>
+              </NextLink>
+            </Flex>
 
             <Flex display={{ base: 'none', md: 'flex' }} ml={10}>
               <DesktopNav />
             </Flex>
-          </Flex>
 
-          <Stack
-            flex={{ base: 1, md: 0 }}
-            justify={'flex-end'}
-            direction={'row'}
-            spacing={6}
-            align="center"
-          >
-            <InputGroup size="md" width="300px" display={{ base: 'none', md: 'flex' }}>
+            <Stack
+              flex={{ base: 1, md: 0 }}
+              justify={'flex-end'}
+              direction={'row'}
+              spacing={6}
+              align="center"
+            >
               <Input
-                pr="4.5rem"
-                type="text"
                 placeholder="Search markets"
-                bg={useColorModeValue('white', 'gray.700')}
-                _hover={{ bg: useColorModeValue('gray.50', 'gray.600') }}
+                size="sm"
+                width={{ base: '100%', md: '200px' }}
                 borderRadius="full"
+                display={{ base: 'none', md: 'block' }}
               />
-              <InputRightElement width="4.5rem">
-                <IconButton
-                  h="1.75rem"
-                  size="sm"
-                  onClick={() => console.log('Searching...')}
-                  icon={<SearchIcon />}
-                  variant="ghost"
-                  colorScheme="blue"
-                  aria-label="Search markets"
-                />
-              </InputRightElement>
-            </InputGroup>
-
-            <AnimatePresence>
               {isWalletConnected ? (
                 <Menu>
                   <MenuButton
@@ -154,149 +131,83 @@ export default function Header() {
                     cursor={'pointer'}
                     minW={0}
                   >
-                    <Avatar size={'sm'} src={'https://avatars.dicebear.com/api/male/username.svg'} />
+                    <Avatar size={'sm'} src={'https://bit.ly/broken-link'} />
                   </MenuButton>
                   <MenuList>
                     <MenuItem onClick={copyAddress}>
-                      <Flex align="center" justify="space-between" width="100%">
-                        <Text isTruncated maxW="150px">{walletAddress}</Text>
-                        <CopyIcon ml={2} />
-                      </Flex>
+                      <Text isTruncated maxW="150px">{walletAddress}</Text>
                     </MenuItem>
-                    <Link href="/profile" passHref legacyBehavior>
-                      <MenuItem as="a">Profile</MenuItem>
-                    </Link>
-                    <Link href="/my-bets" passHref legacyBehavior>
-                      <MenuItem as="a">My Bets</MenuItem>
-                    </Link>
+                    <NextLink href="/profile" passHref>
+                      <MenuItem as="span">Profile</MenuItem>
+                    </NextLink>
+                    <NextLink href="/my-bets" passHref>
+                      <MenuItem as="span">My Bets</MenuItem>
+                    </NextLink>
                     <MenuItem onClick={disconnectWallet}>Disconnect</MenuItem>
                   </MenuList>
                 </Menu>
               ) : (
-                <MotionBox
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.3 }}
+                <Button
+                  onClick={connectWallet}
+                  bgGradient="linear(to-r, blue.400, purple.500)"
+                  color="white"
+                  _hover={{
+                    bgGradient: "linear(to-r, blue.500, purple.600)",
+                  }}
+                  size="sm"
+                  fontWeight="bold"
+                  borderRadius="full"
                 >
-                  <Button
-                    onClick={connectWallet}
-                    colorScheme="blue"
-                    bg="blue.400"
-                    _hover={{ bg: 'blue.500' }}
-                    size="md"
-                    fontWeight="bold"
-                    borderRadius="full"
-                  >
-                    Connect Keplr
-                  </Button>
-                </MotionBox>
+                  Connect Keplr
+                </Button>
               )}
-            </AnimatePresence>
 
-            <IconButton
-              onClick={onToggle}
-              icon={<HamburgerIcon w={5} h={5} />}
-              variant={'ghost'}
-              aria-label={'Toggle Navigation'}
-              display={{ base: 'flex', md: 'none' }}
-            />
-          </Stack>
-        </Flex>
+              <IconButton
+                onClick={onToggle}
+                icon={isOpen ? <CloseIcon w={3} h={3} /> : <HamburgerIcon w={5} h={5} />}
+                variant={'ghost'}
+                aria-label={'Toggle Navigation'}
+                display={{ base: 'flex', md: 'none' }}
+              />
+            </Stack>
+          </Flex>
 
-        <Drawer placement="right" onClose={onClose} isOpen={isOpen}>
-          <DrawerOverlay />
-          <DrawerContent>
-            <DrawerCloseButton />
-            <DrawerHeader>Menu</DrawerHeader>
-            <DrawerBody>
-              <VStack spacing={4} align="stretch">
-                <MobileNav />
-              </VStack>
-            </DrawerBody>
-          </DrawerContent>
-        </Drawer>
-      </Box>
-      <Box height="60px" />
-    </MotionBox>
+          <Collapse in={isOpen} animateOpacity>
+            <MobileNav />
+          </Collapse>
+        </Container>
+      </MotionBox>
+    </>
   );
 }
 
 const DesktopNav = () => {
   const linkColor = useColorModeValue('gray.600', 'gray.200');
   const linkHoverColor = useColorModeValue('gray.800', 'white');
-  const popoverContentBgColor = useColorModeValue('white', 'gray.800');
 
   return (
     <Stack direction={'row'} spacing={4}>
       {NAV_ITEMS.map((navItem) => (
         <Box key={navItem.label}>
-          <Popover trigger={'hover'} placement={'bottom-start'}>
-            <PopoverTrigger>
-              <Link href={navItem.href ?? '#'} passHref legacyBehavior>
-                <Button as="a" p={2} fontSize={'sm'} fontWeight={500} color={linkColor} variant="ghost"
-                  _hover={{
-                    textDecoration: 'none',
-                    color: linkHoverColor,
-                  }}>
-                  {navItem.label}
-                </Button>
-              </Link>
-            </PopoverTrigger>
-
-            {navItem.children && (
-              <PopoverContent
-                border={0}
-                boxShadow={'xl'}
-                bg={popoverContentBgColor}
-                p={4}
-                rounded={'xl'}
-                minW={'sm'}
-              >
-                <Stack>
-                  {navItem.children.map((child) => (
-                    <DesktopSubNav key={child.label} {...child} />
-                  ))}
-                </Stack>
-              </PopoverContent>
-            )}
-          </Popover>
+          <NextLink href={navItem.href ?? '#'} passHref>
+            <Button
+              as="span"
+              p={2}
+              fontSize={'sm'}
+              fontWeight={500}
+              color={linkColor}
+              variant="ghost"
+              _hover={{
+                textDecoration: 'none',
+                color: linkHoverColor,
+              }}
+            >
+              {navItem.label}
+            </Button>
+          </NextLink>
         </Box>
       ))}
     </Stack>
-  );
-};
-
-const DesktopSubNav = ({ label, href, subLabel }: NavItem) => {
-  return (
-    <Link href={href ?? '#'} passHref legacyBehavior>
-      <Button as="a" role={'group'} display={'block'} p={2} rounded={'md'} variant="ghost"
-        _hover={{ bg: useColorModeValue('blue.50', 'gray.900') }}>
-        <Stack direction={'row'} align={'center'}>
-          <Box>
-            <Text
-              transition={'all .3s ease'}
-              _groupHover={{ color: 'blue.400' }}
-              fontWeight={500}
-            >
-              {label}
-            </Text>
-            <Text fontSize={'sm'}>{subLabel}</Text>
-          </Box>
-          <Flex
-            transition={'all .3s ease'}
-            transform={'translateX(-10px)'}
-            opacity={0}
-            _groupHover={{ opacity: '100%', transform: 'translateX(0)' }}
-            justify={'flex-end'}
-            align={'center'}
-            flex={1}
-          >
-            <Icon color={'blue.400'} w={5} h={5} as={ChevronRightIcon} />
-          </Flex>
-        </Stack>
-      </Button>
-    </Link>
   );
 };
 
@@ -310,60 +221,30 @@ const MobileNav = () => {
   );
 };
 
-const MobileNavItem = ({ label, children, href }: NavItem) => {
-  const { isOpen, onToggle } = useDisclosure();
-
+const MobileNavItem = ({ label, href }: NavItem) => {
   return (
-    <Stack spacing={4} onClick={children && onToggle}>
-      <Link href={href ?? '#'} passHref legacyBehavior>
-        <Button as="a" py={2} justifyContent="space-between" alignItems="center" variant="ghost"
+    <Stack spacing={4}>
+      <NextLink href={href ?? '#'} passHref>
+        <Flex
+          py={2}
+          as="span"
+          justify={'space-between'}
+          align={'center'}
           _hover={{
             textDecoration: 'none',
           }}
-          onClick={(e) => children && e.preventDefault()}
         >
           <Text fontWeight={600} color={useColorModeValue('gray.600', 'gray.200')}>
             {label}
           </Text>
-          {children && (
-            <Icon
-              as={ChevronDownIcon}
-              transition={'all .25s ease-in-out'}
-              transform={isOpen ? 'rotate(180deg)' : ''}
-              w={6}
-              h={6}
-            />
-          )}
-        </Button>
-      </Link>
-
-      <Collapse in={isOpen} animateOpacity style={{ marginTop: '0!important' }}>
-        <Stack
-          mt={2}
-          pl={4}
-          borderLeft={1}
-          borderStyle={'solid'}
-          borderColor={useColorModeValue('gray.200', 'gray.700')}
-          align={'start'}
-        >
-          {children &&
-            children.map((child) => (
-              <Link key={child.label} href={child.href ?? '#'} passHref legacyBehavior>
-                <Button as="a" py={2} variant="ghost">
-                  {child.label}
-                </Button>
-              </Link>
-            ))}
-        </Stack>
-      </Collapse>
+        </Flex>
+      </NextLink>
     </Stack>
   );
 };
 
 interface NavItem {
   label: string;
-  subLabel?: string;
-  children?: Array<NavItem>;
   href?: string;
 }
 
@@ -379,5 +260,9 @@ const NAV_ITEMS: Array<NavItem> = [
   {
     label: 'My Bets',
     href: '/my-bets',
+  },
+  {
+    label: 'Resolve Market',
+    href: '/resolve-market',
   },
 ];

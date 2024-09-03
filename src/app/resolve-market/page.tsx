@@ -2,23 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import {
+  ChakraProvider,
+  extendTheme,
   Box,
   Container,
   Heading,
   Text,
   VStack,
   HStack,
-  Button,
   Flex,
   Badge,
-  useColorModeValue,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  Progress,
-  Tooltip,
+  Button,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Spinner,
+  useToast,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -27,380 +29,706 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
-  Select,
-  NumberInput,
-  NumberInputField,
   FormControl,
   FormLabel,
-  useToast,
-  Spinner,
+  Input,
+  Select,
+  Textarea,
+  useColorModeValue,
   Icon,
+  Tooltip,
+  Divider,
   SimpleGrid,
+  Stat,
+  StatLabel,
+  StatNumber,
+  StatHelpText,
+  Progress,
+  RadioGroup,
+  Radio,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  Grid,
+  GridItem,
 } from '@chakra-ui/react';
-import { FaInfoCircle, FaClock, FaVoteYea, FaGavel, FaExclamationTriangle, FaUsers, FaCoins } from 'react-icons/fa';
-import { motion } from 'framer-motion';
+import { FaGavel, FaExclamationTriangle, FaVoteYea, FaClock, FaCoins, FaCheckCircle, FaTimesCircle, FaChartLine, FaUsers } from 'react-icons/fa';
 import axios from 'axios';
+import { motion } from 'framer-motion';
+import { broadcastTransaction } from '../../utils/web3';
 import { useWeb3 } from '../../contexts/Web3Context';
-import { useGlobalContext } from '../../contexts/GlobalContext';
+import { encodeQuery } from '../../utils/queryUtils';
+import { getRealConfig } from '../../utils/api';
 
 const MotionBox = motion(Box);
 
+const theme = extendTheme({
+  fonts: {
+    heading: '"Inter", sans-serif',
+    body: '"Inter", sans-serif',
+  },
+  colors: {
+    brand: {
+      50: '#E6FFFA',
+      100: '#B2F5EA',
+      500: '#319795',
+      900: '#234E52',
+    },
+  },
+});
+
 interface Market {
   id: number;
+  creator: string;
   question: string;
   description: string;
   options: string[];
-  status: 'Closed' | 'ResultProposed' | 'Challenged' | 'Voting' | 'ReadyToResolve';
-  proposedResult?: number;
-  challengedResult?: number;
-  collateral_amount: string;
-  reward_amount: string;
-  end_time: string;
-  votes?: { optionIndex: number; voteCount: number }[];
+  category: string;
+  start_time: number;
+  end_time: number;
+  status: string;
+  resolution_bond: string;
+  resolution_reward: string;
+  result: null | string;
 }
 
-const StatusBadge = ({ status }) => {
-  const colorScheme = {
-    Closed: 'gray',
-    ResultProposed: 'yellow',
-    Challenged: 'orange',
-    Voting: 'blue',
-    ReadyToResolve: 'green',
-  }[status];
+interface Config {
+  admin: string;
+  token_denom: string;
+  platform_fee: string;
+  treasury: string;
+  challenging_period: number;
+  voting_period: number;
+  min_bet: string;
+  whitelist_enabled: boolean;
+}
 
-  return (
-    <Badge colorScheme={colorScheme} px={2} py={1} borderRadius="full">
-      {status}
-    </Badge>
-  );
-};
-
-const MarketCard = ({ market, onAction }) => {
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const textColor = useColorModeValue('gray.700', 'gray.200');
-
-  return (
-    <MotionBox
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      bg={bgColor}
-      borderWidth={1}
-      borderColor={borderColor}
-      borderRadius="xl"
-      p={6}
-      shadow="xl"
-      _hover={{ shadow: '2xl', transform: 'translateY(-5px)' }}
-      height="100%"
-    >
-      <VStack align="stretch" spacing={4} height="100%">
-        <Flex justify="space-between" align="center">
-          <Heading size="md" noOfLines={2} color={textColor}>{market.question}</Heading>
-          <StatusBadge status={market.status} />
-        </Flex>
-        <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')} noOfLines={2}>
-          {market.description}
-        </Text>
-        <HStack justify="space-between">
-          <Tooltip label="Collateral Amount">
-            <HStack>
-              <Icon as={FaCoins} color="yellow.500" />
-              <Text fontWeight="bold" color={textColor}>
-                {(parseInt(market.collateral_amount) / 1000000).toFixed(2)} CMDX
-              </Text>
-            </HStack>
-          </Tooltip>
-          <Tooltip label="Reward Amount">
-            <HStack>
-              <Icon as={FaUsers} color="green.500" />
-              <Text fontWeight="bold" color={textColor}>
-                {(parseInt(market.reward_amount) / 1000000).toFixed(2)} CMDX
-              </Text>
-            </HStack>
-          </Tooltip>
-        </HStack>
-        <HStack>
-          <FaClock />
-          <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
-            {formatTimeRemaining(parseInt(market.end_time))}
-          </Text>
-        </HStack>
-        {market.status === 'Voting' && market.votes && (
-          <VStack align="stretch">
-            <Text fontWeight="bold" color={textColor}>Current Votes:</Text>
-            {market.votes.map((vote, index) => (
-              <HStack key={index} justify="space-between">
-                <Text fontSize="sm" color={textColor}>{market.options[vote.optionIndex]}</Text>
-                <Progress value={vote.voteCount} max={100} width="50%" colorScheme="blue" borderRadius="full" />
-                <Text fontSize="sm" color={textColor}>{vote.voteCount}%</Text>
-              </HStack>
-            ))}
-          </VStack>
-        )}
-        <Button 
-          colorScheme="blue"
-          onClick={() => onAction(market)}
-          leftIcon={getActionIcon(market.status)}
-          mt="auto"
-          size="lg"
-          fontWeight="bold"
-          borderRadius="full"
-          _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg' }}
-        >
-          {getActionText(market.status)}
-        </Button>
-      </VStack>
-    </MotionBox>
-  );
-};
-
-const ResolveMarketsPage = () => {
+const ResolveMarketPage = () => {
   const [markets, setMarkets] = useState<Market[]>([]);
+  const [config, setConfig] = useState<Config | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [actionType, setActionType] = useState('');
-  const [selectedOption, setSelectedOption] = useState(0);
-  const [collateralAmount, setCollateralAmount] = useState(0);
-  const { isWalletConnected, walletAddress, connectWallet } = useWeb3();
-  const { isInitialLoading, error } = useGlobalContext();
+  const [proposedOutcome, setProposedOutcome] = useState('');
+  const [disputeOutcome, setDisputeOutcome] = useState('');
+  const [disputeEvidence, setDisputeEvidence] = useState('');
+  const [voteOutcome, setVoteOutcome] = useState('');
+  const [marketType, setMarketType] = useState('closed');
+  const { isOpen: isProposeOpen, onOpen: onProposeOpen, onClose: onProposeClose } = useDisclosure();
+  const { isOpen: isDisputeOpen, onOpen: onDisputeOpen, onClose: onDisputeClose } = useDisclosure();
+  const { isOpen: isVoteOpen, onOpen: onVoteOpen, onClose: onVoteClose } = useDisclosure();
   const toast = useToast();
+  const { isWalletConnected, walletAddress } = useWeb3();
 
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
-
-  useEffect(() => {
-    if (!isInitialLoading) {
-      fetchMarkets();
-    }
-  }, [isInitialLoading]);
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+  const cardBgColor = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const accentColor = "blue.400";
+  const gradientColor = "linear(to-r, blue.400, purple.500)";
 
   const fetchMarkets = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/markets');
-      const filteredMarkets = response.data.filter(market => 
-        ['Closed', 'ResultProposed', 'Challenged', 'Voting', 'ReadyToResolve'].includes(market.status)
+      const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
+      const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+      if (!REAL_BASE_URL || !CONTRACT_ADDRESS) {
+        throw new Error("REST URL or Contract Address not defined in environment variables");
+      }
+
+      const query = {
+        markets: {
+          status: marketType === 'closed' ? "Closed" : "Disputed",
+          start_after: 0,
+          limit: 10
+        }
+      };
+      const encodedQuery = encodeQuery(query);
+
+      const response = await axios.get(
+        `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
       );
-      setMarkets(filteredMarkets);
+      setMarkets(response.data.data);
     } catch (error) {
-      console.error('Error fetching markets:', error);
+      console.error("Error fetching markets:", error);
       toast({
-        title: 'Error fetching markets',
-        description: 'Please try again later.',
-        status: 'error',
+        title: "Error",
+        description: "Failed to fetch markets.",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
     }
   };
 
-  const handleAction = (market: Market) => {
-    setSelectedMarket(market);
-    setActionType(getActionText(market.status));
-    setCollateralAmount(parseInt(market.collateral_amount) / 1000000);
-    onOpen();
+  const fetchConfig = async () => {
+    try {
+      const configData = await getRealConfig();
+      setConfig(configData);
+    } catch (error) {
+      console.error("Error fetching config:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch configuration.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
-  const handleSubmitAction = async () => {
-    if (!isWalletConnected) {
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      await Promise.all([fetchMarkets(), fetchConfig()]);
+      setIsLoading(false);
+    };
+    fetchData();
+  }, [marketType]);
+
+  const handleProposeResult = async () => {
+    if (!isWalletConnected || !selectedMarket) {
       toast({
-        title: 'Wallet not connected',
-        description: 'Please connect your Keplr wallet to perform this action.',
-        status: 'warning',
-        duration: 5000,
+        title: "Error",
+        description: "Please connect your wallet and select a market.",
+        status: "error",
+        duration: 3000,
         isClosable: true,
       });
       return;
     }
 
     try {
-      // Here you would integrate with Keplr to sign and broadcast the transaction
-      // This is a placeholder for the actual Keplr integration
-      const response = await axios.post('http://localhost:3001/api/market-action', {
-        marketId: selectedMarket.id,
-        action: actionType,
-        option: selectedOption,
-        collateralAmount,
-        walletAddress,
-      });
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
+      }
+
+      const msg = {
+        propose_result: {
+          market_id: selectedMarket.id,
+          winning_outcome: parseInt(proposedOutcome)
+        }
+      };
+
+      const funds = [{
+        denom: "ucmdx",
+        amount: selectedMarket.resolution_bond
+      }];
+
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
 
       toast({
-        title: 'Action Submitted',
-        description: `Your ${actionType} has been submitted successfully.`,
-        status: 'success',
+        title: "Result Proposed",
+        description: `Result proposed for market ${selectedMarket.id}. Transaction hash: ${result.transactionHash}`,
+        status: "success",
         duration: 5000,
         isClosable: true,
       });
 
-      onClose();
-      fetchMarkets(); // Refresh the markets list
-    } catch (error) {
-      console.error('Error submitting action:', error);
+      onProposeClose();
+      fetchMarkets();
+    } catch (err) {
+      console.error("Error proposing result:", err);
       toast({
-        title: 'Error',
-        description: 'There was an error submitting your action. Please try again.',
-        status: 'error',
+        title: "Error",
+        description: "Failed to propose result. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
     }
   };
 
-  if (isInitialLoading) {
-    return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
-        <Spinner size="xl" color="blue.500" thickness="4px" />
-      </Box>
-    );
-  }
+  const handleRaiseDispute = async () => {
+    if (!isWalletConnected || !selectedMarket) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet and select a market.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
 
-  if (error) {
-    return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
-        <Text color="red.500" fontSize="xl" fontWeight="bold">{error}</Text>
-      </Box>
-    );
-  }
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
+      }
+
+      const msg = {
+        raise_dispute: {
+          market_id: selectedMarket.id,
+          proposed_outcome: parseInt(disputeOutcome),
+          evidence: disputeEvidence
+        }
+      };
+
+      const funds = [{
+        denom: "ucmdx",
+        amount: selectedMarket.resolution_bond
+      }];
+
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+
+      toast({
+        title: "Dispute Raised",
+        description: `Dispute raised for market ${selectedMarket.id}. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      onDisputeClose();
+      fetchMarkets();
+    } catch (err) {
+      console.error("Error raising dispute:", err);
+      toast({
+        title: "Error",
+        description: "Failed to raise dispute. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleCastVote = async () => {
+    if (!isWalletConnected || !selectedMarket) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet and select a market.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
+      }
+
+      const msg = {
+        cast_vote: {
+          market_id: selectedMarket.id,
+          outcome: parseInt(voteOutcome)
+        }
+      };
+
+      const result = await broadcastTransaction(chainId, contractAddress, msg, []);
+
+      toast({
+        title: "Vote Cast",
+        description: `Vote cast for market ${selectedMarket.id}. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      onVoteClose();
+      fetchMarkets();
+    } catch (err) {
+      console.error("Error casting vote:", err);
+      toast({
+        title: "Error",
+        description: "Failed to cast vote. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const MarketCard = ({ market }: { market: Market }) => (
+    <MotionBox
+      bg={cardBgColor}
+      p={6}
+      borderRadius="xl"
+      boxShadow="xl"
+      border="1px solid"
+      borderColor={borderColor}
+      transition="all 0.3s"
+      _hover={{ transform: 'translateY(-5px)', boxShadow: '2xl' }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <VStack align="stretch" spacing={4}>
+        <Heading size="md" noOfLines={2}>{market.question}</Heading>
+        <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.400")} noOfLines={3}>
+          {market.description}
+        </Text>
+        <Divider />
+        <SimpleGrid columns={2} spacing={4}>
+          <Stat>
+            <StatLabel>Bond Amount</StatLabel>
+            <StatNumber>{parseInt(market.resolution_bond) / 1000000} CMDX</StatNumber>
+          </Stat>
+          <Stat>
+            <StatLabel>Reward Amount</StatLabel>
+            <StatNumber>{parseInt(market.resolution_reward) / 1000000} CMDX</StatNumber>
+          </Stat>
+        </SimpleGrid>
+        <Divider />
+        <HStack justify="space-between">
+          <Badge colorScheme={market.status === 'Closed' ? 'yellow' : 'red'}>
+            {market.status}
+          </Badge>
+          <HStack>
+            {market.status === 'Closed' && (
+              <Tooltip label="Propose Result">
+                <Button
+                  size="sm"
+                  colorScheme="blue"
+                  onClick={() => {
+                    setSelectedMarket(market);
+                    onProposeOpen();
+                  }}
+                >
+                  <Icon as={FaGavel} />
+                </Button>
+              </Tooltip>
+            )}
+            {market.status === 'Closed' && (
+              <Tooltip label="Raise Dispute">
+                <Button
+                  size="sm"
+                  colorScheme="red"
+                  onClick={() => {
+                    setSelectedMarket(market);
+                    onDisputeOpen();
+                  }}
+                >
+                  <Icon as={FaExclamationTriangle} />
+                </Button>
+              </Tooltip>
+            )}
+            {market.status === 'Disputed' && (
+              <Tooltip label="Cast Vote">
+                <Button
+                  size="sm"
+                  colorScheme="green"
+                  onClick={() => {
+                    setSelectedMarket(market);
+                    onVoteOpen();
+                  }}
+                >
+                  <Icon as={FaVoteYea} />
+                </Button>
+              </Tooltip>
+            )}
+          </HStack>
+        </HStack>
+      </VStack>
+    </MotionBox>
+  );
+
+  const ResolutionProcess = () => (
+    <Box
+      bg={cardBgColor}
+      p={8}
+      borderRadius="xl"
+      boxShadow="2xl"
+      border="1px solid"
+      borderColor={borderColor}
+      mt={12}
+    >
+      <Heading size="lg" mb={6} bgGradient={gradientColor} bgClip="text">Resolution Process</Heading>
+      <VStack spacing={8} align="stretch">
+        {[
+          { icon: FaCheckCircle, title: "Market Closes", description: "The market reaches its end time and closes for trading." },
+          { icon: FaGavel, title: "Result Proposal", description: "Users can propose a result by staking the resolution bond." },
+          { icon: FaClock, title: "Challenging Period", description: `Other users can dispute the proposed result within ${config ? config.challenging_period / 3600 : 'N/A'} hours.` },
+          { icon: FaExclamationTriangle, title: "Dispute Raised", description: "If disputed, the market enters a voting phase." },
+          { icon: FaVoteYea, title: "Voting Period", description: `Whitelisted users vote on the correct outcome within ${config ? config.voting_period / 3600 : 'N/A'} hours.` },
+          { icon: FaCoins, title: "Resolution", description: "The market is resolved based on voting results or undisputed proposal." },
+        ].map((step, index) => (
+          <HStack key={index} spacing={4} align="start">
+            <Box
+              borderRadius="full"
+              bg={useColorModeValue("blue.100", "blue.900")}
+              p={3}
+              color={accentColor}
+            >
+              <Icon as={step.icon} boxSize={6} />
+            </Box>
+            <VStack align="start" spacing={1}>
+              <Text fontWeight="bold">{step.title}</Text>
+              <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.400")}>
+                {step.description}
+              </Text>
+            </VStack>
+          </HStack>
+        ))}
+      </VStack>
+    </Box>
+  );
 
   return (
-    <Box bg={bgColor} minHeight="100vh" py={12}>
-      <Container maxW="container.xl">
-        <VStack spacing={8} align="stretch">
-          <Heading size="2xl" textAlign="center" bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text">
-            Resolve Markets
-          </Heading>
-          <Text textAlign="center" fontSize="xl" color={useColorModeValue('gray.600', 'gray.400')}>
-            Participate in the resolution process of prediction markets and earn rewards.
-          </Text>
-          
-          {!isWalletConnected && (
-            <Button
-              colorScheme="blue"
-              size="lg"
-              onClick={connectWallet}
-              alignSelf="center"
-              mb={4}
-              leftIcon={<Icon as={FaInfoCircle} />}
+    <ChakraProvider theme={theme}>
+      <Box bg={bgColor} minHeight="100vh" py={12}>
+        <Container maxW="container.xl">
+          <VStack spacing={10} align="stretch">
+            <MotionBox
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
             >
-              Connect Keplr Wallet
-            </Button>
-          )}
+              <Flex 
+                justifyContent="space-between" 
+                alignItems="center" 
+                bg={cardBgColor} 
+                p={8} 
+                borderRadius="2xl" 
+                boxShadow="xl"
+                bgGradient={gradientColor}
+              >
+                <VStack align="start" spacing={1}>
+                  <Heading size="2xl" color="white">Resolve Markets</Heading>
+                  <Text color="whiteAlpha.800">Propose results, raise disputes, and vote on market outcomes</Text>
+                </VStack>
+                <Icon as={FaGavel} fontSize="5xl" color="white" />
+              </Flex>
+            </MotionBox>
 
-          <Tabs isFitted variant="soft-rounded" colorScheme="blue">
-            <TabList mb="1em">
-              <Tab>All</Tab>
-              <Tab>Closed</Tab>
-              <Tab>Proposed</Tab>
-              <Tab>Challenged</Tab>
-              <Tab>Voting</Tab>
-              <Tab>Ready to Resolve</Tab>
-            </TabList>
-            <TabPanels>
-              {['All', 'Closed', 'ResultProposed', 'Challenged', 'Voting', 'ReadyToResolve'].map((status, index) => (
-                <TabPanel key={index}>
-                  <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                    {markets
-                      .filter(market => status === 'All' || market.status === status)
-                      .map(market => (
-                        <MarketCard key={market.id} market={market} onAction={handleAction} />
+            <Tabs variant="soft-rounded" colorScheme="blue" onChange={(index) => setMarketType(index === 0 ? 'closed' : 'disputed')}>
+              <TabList>
+                <Tab>Closed Markets</Tab>
+                <Tab>Disputed Markets</Tab>
+              </TabList>
+              <TabPanels>
+                <TabPanel>
+                  <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={8}>
+                    {isLoading ? (
+                      <GridItem colSpan={3}>
+                        <Flex justify="center" align="center" height="200px">
+                          <Spinner size="xl" color={accentColor} thickness="4px" />
+                        </Flex>
+                      </GridItem>
+                    ) : markets.length === 0 ? (
+                      <GridItem colSpan={3}>
+                        <Text textAlign="center" fontSize="xl" color={textColor}>No closed markets available.</Text>
+                      </GridItem>
+                    ) : (
+                      markets.map((market) => (
+                        <MarketCard key={market.id} market={market} />
                       ))
-                    }
-                  </SimpleGrid>
+                    )}
+                  </Grid>
                 </TabPanel>
-              ))}
-            </TabPanels>
-          </Tabs>
-        </VStack>
-      </Container>
+                <TabPanel>
+                  <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }} gap={8}>
+                    {isLoading ? (
+                      <GridItem colSpan={3}>
+                        <Flex justify="center" align="center" height="200px">
+                          <Spinner size="xl" color={accentColor} thickness="4px" />
+                        </Flex>
+                      </GridItem>
+                    ) : markets.length === 0 ? (
+                      <GridItem colSpan={3}>
+                        <Text textAlign="center" fontSize="xl" color={textColor}>No disputed markets available.</Text>
+                      </GridItem>
+                    ) : (
+                      markets.map((market) => (
+                        <MarketCard key={market.id} market={market} />
+                      ))
+                    )}
+                  </Grid>
+                </TabPanel>
+              </TabPanels>
+            </Tabs>
 
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay backdropFilter="blur(10px)" />
-        <ModalContent borderRadius="xl" bg={useColorModeValue('white', 'gray.800')}>
-          <ModalHeader bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text" fontWeight="bold">
-            {actionType}
-          </ModalHeader>
+            <ResolutionProcess />
+
+            {config && (
+              <Box bg={cardBgColor} p={6} borderRadius="xl" boxShadow="xl">
+                <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Platform Configuration</Heading>
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6}>
+                  <Stat>
+                    <StatLabel>Platform Fee</StatLabel>
+                    <StatNumber>{parseInt(config.platform_fee) / 100}%</StatNumber>
+                  </Stat>
+                  <Stat>
+                    <StatLabel>Challenging Period</StatLabel>
+                    <StatNumber>{config.challenging_period / 3600} hours</StatNumber>
+                  </Stat>
+                  <Stat>
+                    <StatLabel>Voting Period</StatLabel>
+                    <StatNumber>{config.voting_period / 3600} hours</StatNumber>
+                  </Stat>
+                  <Stat>
+                    <StatLabel>Minimum Bet</StatLabel>
+                    <StatNumber>{parseInt(config.min_bet) / 1000000} CMDX</StatNumber>
+                  </Stat>
+                </SimpleGrid>
+              </Box>
+            )}
+          </VStack>
+        </Container>
+      </Box>
+
+      {/* Propose Result Modal */}
+      <Modal isOpen={isProposeOpen} onClose={onProposeClose}>
+        <ModalOverlay backdropFilter="blur(5px)" />
+        <ModalContent bg={cardBgColor}>
+          <ModalHeader bgGradient={gradientColor} bgClip="text">Propose Result</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <VStack spacing={4}>
-              {['Propose Result', 'Challenge Proposal'].includes(actionType) && (
-                <>
-                  <FormControl>
-                    <FormLabel>Select Option</FormLabel>
-                    <Select value={selectedOption} onChange={(e) => setSelectedOption(Number(e.target.value))}>
-                      {selectedMarket?.options.map((option, index) => (
-                        <option key={index} value={index}>{option}</option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Collateral Amount (CMDX)</FormLabel>
-                    <NumberInput value={collateralAmount} isReadOnly>
-                      <NumberInputField />
-                    </NumberInput>
-                  </FormControl>
-                </>
-              )}
-              {actionType === 'Vote' && (
-                <FormControl>
-                  <FormLabel>Select Option to Vote</FormLabel>
-                  <Select value={selectedOption} onChange={(e) => setSelectedOption(Number(e.target.value))}>
-                    {selectedMarket?.options.map((option, index) => (
-                      <option key={index} value={index}>{option}</option>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-              {actionType === 'Resolve' && (
-                <Text>Are you sure you want to resolve this market?</Text>
-              )}
+            <FormControl>
+              <FormLabel>Winning Outcome</FormLabel>
+              <Select 
+                value={proposedOutcome} 
+                onChange={(e) => setProposedOutcome(e.target.value)}
+                bg={useColorModeValue("white", "gray.700")}
+              >
+                {selectedMarket?.options.map((option, index) => (
+                  <option key={index} value={index}>{option}</option>
+                ))}
+              </Select>
+            </FormControl>
+            <VStack mt={4} align="stretch" spacing={4}>
+              <Stat>
+                <StatLabel>Bond Amount</StatLabel>
+                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_bond) / 1000000} CMDX</StatNumber>
+                <StatHelpText>Required to propose a result</StatHelpText>
+              </Stat>
+              <Stat>
+                <StatLabel>Reward Amount</StatLabel>
+                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_reward) / 1000000} CMDX</StatNumber>
+                <StatHelpText>Earned for successful resolution</StatHelpText>
+              </Stat>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSubmitAction} isDisabled={!isWalletConnected}>
-              Confirm
+            <Button 
+              colorScheme="blue" 
+              mr={3} 
+              onClick={handleProposeResult}
+              bgGradient={gradientColor}
+              _hover={{
+                bgGradient: "linear(to-r, blue.500, purple.600)",
+              }}
+            >
+              Propose
             </Button>
-            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button variant="ghost" onClick={onProposeClose}>Cancel</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Box>
+
+      {/* Raise Dispute Modal */}
+      <Modal isOpen={isDisputeOpen} onClose={onDisputeClose}>
+        <ModalOverlay backdropFilter="blur(5px)" />
+        <ModalContent bg={cardBgColor}>
+          <ModalHeader bgGradient={gradientColor} bgClip="text">Raise Dispute</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl mb={4}>
+              <FormLabel>Proposed Outcome</FormLabel>
+              <Select 
+                value={disputeOutcome} 
+                onChange={(e) => setDisputeOutcome(e.target.value)}
+                bg={useColorModeValue("white", "gray.700")}
+              >
+                {selectedMarket?.options.map((option, index) => (
+                  <option key={index} value={index}>{option}</option>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl>
+              <FormLabel>Evidence</FormLabel>
+              <Textarea 
+                value={disputeEvidence}
+                onChange={(e) => setDisputeEvidence(e.target.value)}
+                placeholder="Provide evidence supporting your proposed outcome"
+                bg={useColorModeValue("white", "gray.700")}
+              />
+            </FormControl>
+            <VStack mt={4} align="stretch" spacing={4}>
+              <Stat>
+                <StatLabel>Bond Amount</StatLabel>
+                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_bond) / 1000000} CMDX</StatNumber>
+                <StatHelpText>Required to raise a dispute</StatHelpText>
+              </Stat>
+              <Stat>
+                <StatLabel>Challenging Period</StatLabel>
+                <StatNumber>{config ? config.challenging_period / 3600 : 'N/A'} hours</StatNumber>
+                <StatHelpText>Time left to raise a dispute</StatHelpText>
+              </Stat>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              colorScheme="red" 
+              mr={3} 
+              onClick={handleRaiseDispute}
+              bgGradient="linear(to-r, red.400, pink.500)"
+              _hover={{
+                bgGradient: "linear(to-r, red.500, pink.600)",
+              }}
+            >
+              Raise Dispute
+            </Button>
+            <Button variant="ghost" onClick={onDisputeClose}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Cast Vote Modal */}
+      <Modal isOpen={isVoteOpen} onClose={onVoteClose}>
+        <ModalOverlay backdropFilter="blur(5px)" />
+        <ModalContent bg={cardBgColor}>
+          <ModalHeader bgGradient={gradientColor} bgClip="text">Cast Vote</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <FormControl>
+              <FormLabel>Choose Outcome</FormLabel>
+              <RadioGroup onChange={setVoteOutcome} value={voteOutcome}>
+                <VStack align="start">
+                  {selectedMarket?.options.map((option, index) => (
+                    <Radio key={index} value={index.toString()}>{option}</Radio>
+                  ))}
+                </VStack>
+              </RadioGroup>
+            </FormControl>
+            <VStack mt={4} align="stretch" spacing={4}>
+              <Stat>
+                <StatLabel>Voting Period</StatLabel>
+                <StatNumber>{config ? config.voting_period / 3600 : 'N/A'} hours</StatNumber>
+                <StatHelpText>Time left to cast your vote</StatHelpText>
+              </Stat>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              colorScheme="green" 
+              mr={3} 
+              onClick={handleCastVote}
+              bgGradient="linear(to-r, green.400, teal.500)"
+              _hover={{
+                bgGradient: "linear(to-r, green.500, teal.600)",
+              }}
+            >
+              Cast Vote
+            </Button>
+            <Button variant="ghost" onClick={onVoteClose}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </ChakraProvider>
   );
 };
 
-const formatTimeRemaining = (endTime: number) => {
-  const now = Math.floor(Date.now() / 1000);
-  const timeLeft = endTime - now;
-
-  if (timeLeft <= 0) return 'Ended';
-
-  const days = Math.floor(timeLeft / 86400);
-  const hours = Math.floor((timeLeft % 86400) / 3600);
-  const minutes = Math.floor((timeLeft % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h remaining`;
-  if (hours > 0) return `${hours}h ${minutes}m remaining`;
-  return `${minutes}m remaining`;
-};
-
-const getActionText = (status: string) => {
-  switch (status) {
-    case 'Closed': return 'Propose Result';
-    case 'ResultProposed': return 'Challenge Proposal';
-    case 'Challenged':
-    case 'Voting': return 'Vote';
-    case 'ReadyToResolve': return 'Resolve';
-    default: return 'View Details';
-  }
-};
-
-const getActionIcon = (status: string) => {
-  switch (status) {
-    case 'Closed': return FaGavel;
-    case 'ResultProposed': return FaExclamationTriangle;
-    case 'Challenged':
-    case 'Voting': return FaVoteYea;
-    case 'ReadyToResolve': return FaGavel;
-    default: return FaInfoCircle;
-  }
-};
-
-export default ResolveMarketsPage;
+export default ResolveMarketPage;
