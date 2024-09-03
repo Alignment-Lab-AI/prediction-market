@@ -233,7 +233,7 @@ export default function FeaturedMarkets() {
   // Even if there's an error or no markets, we'll still render the component
   // This ensures the homepage doesn't break
   return (
-    <Box py={20} bg={bgColor}>
+    <Box py={20} bg="transparent">
        <MotionHeading
         as="h2"
         size="2xl"

@@ -22,7 +22,7 @@ export default function Home() {
   }
 
   return (
-    <Box bg="gray.50" minHeight="100vh">
+    <Box bg="transparent" minHeight="100vh">
       <Container maxW="container.xl" py={20}>
         <Box mb={0}>
           <Hero />

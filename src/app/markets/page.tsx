@@ -84,7 +84,7 @@ const MarketCard = ({ market }: { market: Market }) => {
   
     return (
       <GlassBox
-        bg={cardBg}
+        bg="transparent"
         height="400px"
         display="flex"
         flexDirection="column"
@@ -113,7 +113,7 @@ const MarketCard = ({ market }: { market: Market }) => {
             ))}
           </Box>
         </VStack>
-        <Flex direction="column" p={6} bg={useColorModeValue('gray.50', 'gray.700')} mt="auto">
+        <Flex direction="column" p={6} bg="transparent" mt="auto">
           <HStack justify="space-between" mb={4}>
             <HStack>
               <Icon as={FaChartLine} color="blue.500" />
@@ -256,12 +256,12 @@ const MarketsPage = () => {
     const textColor = useColorModeValue('gray.700', 'gray.200');
 
   return (
-    <Box bg={bgColor} minHeight="100vh" py={12}>
+    <Box bg="transparent" minHeight="100vh" py={12}>
       <Container maxW="container.xl">
         <VStack spacing={8} align="stretch">
           <Flex justify="space-between" align="center" mb={8}>
             <Heading 
-              size="2xl" 
+              fontSize="4xl" 
               bgGradient="linear(to-r, blue.400, purple.500)"
               bgClip="text"
               fontWeight="extrabold"

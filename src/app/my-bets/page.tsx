@@ -333,7 +333,7 @@ const MyBetsPage = () => {
 
   return (
     <ChakraProvider theme={theme}>
-      <Box bg={bgColor} minHeight="100vh" py={12}>
+      <Box bg="transparent" minHeight="100vh" py={12}>
         <Container maxW="container.xl">
           <VStack spacing={8} align="stretch">
             <Heading textAlign="center" bgGradient={gradientColor} bgClip="text" fontSize="4xl" fontWeight="extrabold" mb={8}>
