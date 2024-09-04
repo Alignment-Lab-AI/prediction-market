@@ -107,6 +107,38 @@ const MyBetsPage = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const gradientColor = useColorModeValue("linear(to-r, blue.400, purple.500)", "linear(to-r, blue.200, purple.300)");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  const Pagination = ({ items, currentPage, itemsPerPage, setCurrentPage }) => {
+    const pageCount = Math.ceil(items.length / itemsPerPage);
+
+    return (
+      <Flex justifyContent="space-between" mt={4} alignItems="center">
+        <Text>
+          Showing {Math.min(currentPage * itemsPerPage, items.length)} of {items.length} items
+        </Text>
+        <HStack>
+          <Button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            size="sm"
+          >
+            Previous
+          </Button>
+          <Text>{currentPage} / {pageCount}</Text>
+          <Button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, pageCount))}
+            disabled={currentPage === pageCount}
+            size="sm"
+          >
+            Next
+          </Button>
+        </HStack>
+      </Flex>
+    );
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!isWalletConnected || !walletAddress) {
@@ -381,7 +413,7 @@ const MyBetsPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <Tabs variant="soft-rounded" colorScheme="blue" bg={cardBgColor} borderRadius="xl" boxShadow="xl" p={6}>
+              <Tabs variant="soft-rounded" colorScheme="blue" bg={cardBgColor} borderRadius="xl" boxShadow="xl" p={6} onChange={() => setCurrentPage(1)}>
                 <TabList mb={6}>
                   <Tab fontWeight="semibold">Active Orders</Tab>
                   <Tab fontWeight="semibold">Matched Bets</Tab>
@@ -389,20 +421,24 @@ const MyBetsPage = () => {
                 </TabList>
 
                 <TabPanels>
-                  <TabPanel>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Market</Th>
-                          <Th>Side</Th>
-                          <Th>Amount</Th>
-                          <Th>Odds</Th>
-                          <Th>Filled Amount</Th>
-                          <Th>Action</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {activeOrders.map((order) => (
+                <TabPanel>
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th>Market</Th>
+                        <Th>Side</Th>
+                        <Th>Amount</Th>
+                        <Th>Odds</Th>
+                        <Th>Filled Amount</Th>
+                        <Th>Timestamp</Th>
+                        <Th>Action</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                    {activeOrders
+                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((order) => (
                           <Tr key={order.id}>
                             <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
                             <Td>
@@ -413,6 +449,7 @@ const MyBetsPage = () => {
                             <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
                             <Td>{(order.odds / 100).toFixed(2)}</Td>
                             <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                            <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
                             <Td>
                               <Button
                                 onClick={() => cancelOrder(order.id)}
@@ -437,24 +474,34 @@ const MyBetsPage = () => {
                             </Td>
                           </Tr>
                         ))}
-                      </Tbody>
-                    </Table>
-                  </TabPanel>
+                    </Tbody>
+                  </Table>
+                  <Pagination 
+                    items={activeOrders}
+                    currentPage={currentPage}
+                    itemsPerPage={itemsPerPage}
+                    setCurrentPage={setCurrentPage}
+                  />
+                </TabPanel>
 
-                  <TabPanel>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Market</Th>
-                          <Th>Amount</Th>
-                          <Th>Odds</Th>
-                          <Th>Role</Th>
-                          <Th>Status</Th>
-                          <Th>Action</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {matchedBets.map((bet) => {
+                <TabPanel>
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th>Market</Th>
+                        <Th>Amount</Th>
+                        <Th>Odds</Th>
+                        <Th>Role</Th>
+                        <Th>Status</Th>
+                        <Th>Timestamp</Th>
+                        <Th>Action</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                    {matchedBets
+                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((bet) => {
                           const isBackUser = bet.back_user === walletAddress;
                           const market = markets.find(m => m.id === bet.market_id);
                           const marketResolved = market?.status === 'Resolved';
@@ -477,6 +524,7 @@ const MyBetsPage = () => {
                                   <Badge colorScheme="blue">Active</Badge>
                                 )}
                               </Td>
+                              <Td>{new Date(bet.timestamp * 1000).toLocaleString()}</Td>
                               <Td>
                                 <Tooltip label={!marketResolved ? "Market not yet resolved" : bet.redeemed ? "Already redeemed" : "Redeem your winnings"}>
                                   <Button
@@ -505,44 +553,61 @@ const MyBetsPage = () => {
                             </Tr>
                           );
                         })}
-                      </Tbody>
-                    </Table>
-                  </TabPanel>
+                    </Tbody>
+                  </Table>
+                  <Pagination 
+                    items={matchedBets}
+                    currentPage={currentPage}
+                    itemsPerPage={itemsPerPage}
+                    setCurrentPage={setCurrentPage}
+                  />
+                </TabPanel>
 
-                  <TabPanel>
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Market</Th>
-                          <Th>Side</Th>
-                          <Th>Amount</Th>
-                          <Th>Odds</Th>
-                          <Th>Filled Amount</Th>
-                          <Th>Status</Th>
+                <TabPanel>
+                <Table variant="simple">
+                  <Thead>
+                    <Tr>
+                      <Th>Market</Th>
+                      <Th>Side</Th>
+                      <Th>Amount</Th>
+                      <Th>Odds</Th>
+                      <Th>Filled Amount</Th>
+                      <Th>Status</Th>
+                      <Th>Timestamp</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                  {pastOrders
+                    .sort((a, b) => b.timestamp - a.timestamp)
+                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                    .map((order) => (
+                        <Tr key={order.id}>
+                          <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
+                          <Td>
+                            <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                              {order.side}
+                            </Badge>
+                          </Td>
+                          <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                          <Td>{(order.odds / 100).toFixed(2)}</Td>
+                          <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                          <Td>
+                            <Badge colorScheme={order.status === 'Filled' ? 'green' : 'gray'}>
+                              {order.status}
+                            </Badge>
+                          </Td>
+                          <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
                         </Tr>
-                      </Thead>
-                      <Tbody>
-                        {pastOrders.map((order) => (
-                          <Tr key={order.id}>
-                            <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
-                            <Td>
-                              <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
-                                {order.side}
-                              </Badge>
-                            </Td>
-                            <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
-                            <Td>{(order.odds / 100).toFixed(2)}</Td>
-                            <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
-                            <Td>
-                              <Badge colorScheme={order.status === 'Filled' ? 'green' : 'gray'}>
-                                {order.status}
-                              </Badge>
-                            </Td>
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </TabPanel>
+                      ))}
+                  </Tbody>
+                </Table>
+                <Pagination 
+                  items={pastOrders}
+                  currentPage={currentPage}
+                  itemsPerPage={itemsPerPage}
+                  setCurrentPage={setCurrentPage}
+                />
+                </TabPanel>
                 </TabPanels>
               </Tabs>
             </MotionBox>
