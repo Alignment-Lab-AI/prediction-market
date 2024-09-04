@@ -66,7 +66,7 @@ export default function CallToAction() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          Ignite Your Predictive Prowess
+            Unleash Your Predictive Power
         </MotionHeading>
         <MotionText
           fontSize="xl"
@@ -77,8 +77,7 @@ export default function CallToAction() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          Harness the power of AI-driven insights to shape tomorrow's markets. Join our visionary community and turn your predictions into profitable opportunities.
-        </MotionText>
+          Join PredictX today and transform your foresight into tangible rewards. Our AI-driven platform empowers you to make informed predictions and profit from your knowledge.        </MotionText>
         <MotionButton
           as={MotionButton}
           size="lg"

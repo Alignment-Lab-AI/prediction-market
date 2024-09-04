@@ -59,7 +59,7 @@ export default function Hero() {
               bgClip="text"
               mb={4}
             >
-              Build your AI Prediction Market
+                Predict the Future, Profit Today
             </MotionHeading>
             <MotionText
               fontSize="2xl"
@@ -68,8 +68,8 @@ export default function Hero() {
               maxW="3xl"
               mx="auto"
             >
-              Shape the future with your insights on our cutting-edge prediction platform.
-              Grow your influence, not your overhead.
+                Welcome to PredictX, where your insights shape tomorrow's markets. 
+                Harness the power of collective intelligence and turn your predictions into profitable opportunities.
             </MotionText>
           </MotionBox>
 

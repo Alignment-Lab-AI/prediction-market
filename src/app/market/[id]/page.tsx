@@ -189,11 +189,11 @@ const OrderBook = ({
         // Filter orders for the specific option
         const filteredBackOrders = allOrders
           .filter(order => order.side === "Back" && order.option_id === optionIndex)
-          .sort((a, b) => b.odds - a.odds);
+          .sort((a, b) => a.odds - b.odds); // Changed from b.odds - a.odds
 
         const filteredLayOrders = allOrders
           .filter(order => order.side === "Lay" && order.option_id === optionIndex)
-          .sort((a, b) => a.odds - b.odds);
+          .sort((a, b) => b.odds - a.odds); // Changed from a.odds - b.odds
 
         setBackOrders(filteredBackOrders);
         setLayOrders(filteredLayOrders);
@@ -209,7 +209,7 @@ const OrderBook = ({
 
   const getBackgroundColor = (index: number, isBack: boolean) => {
     const baseColor = isBack ? 'blue' : 'red';
-    const intensity = 100 + index * 100; // 100, 200, 300
+    const intensity = 300 - index * 100; // Now 300, 200, 100
     return `${baseColor}.${intensity}`;
   };
 
@@ -544,26 +544,23 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
   const headingColor = useColorModeValue('gray.700', 'white');
 
   const fetchRecentOrders = async () => {
-    if (!walletAddress) return;
-
     try {
       const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
       const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-
+  
       const query = {
-        user_orders: {
-          user: walletAddress,
+        market_orders: {
           market_id: marketId,
           start_after: 0,
           limit: 5
         }
       };
       const encodedQuery = encodeQuery(query);
-
+  
       const response = await axios.get(
         `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
       );
-
+  
       setOrders(response.data.data);
       setIsLoading(false);
     } catch (error) {
@@ -574,7 +571,7 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
 
   useEffect(() => {
     fetchRecentOrders();
-  }, [walletAddress, marketId]);
+  }, [marketId]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -806,9 +803,12 @@ const MarketContent = ({ id }: { id: string }) => {
   };
 
   const handleBetPlaced = () => {
-    // Refresh recent orders
-    // You might want to implement a more efficient way to update the orders
-    // rather than re-fetching all of them
+    // Refresh the OrderBook data
+    if (market) {
+      const updatedMarket = { ...market };
+      setMarket(null); // Force a re-render
+      setTimeout(() => setMarket(updatedMarket), 0);
+    }
   };
 
   if (isLoading) {
