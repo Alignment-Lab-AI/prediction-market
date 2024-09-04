@@ -112,7 +112,11 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const toast = useToast();
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedMarket, setSelectedMarket] = useState(null);
+  const { isOpen: isProposeResultOpen, onClose: onCloseProposeResult } = useDisclosure();
+  
   // New state for config editing
   const [editingConfig, setEditingConfig] = useState({ field: '', value: '' });
   const { isOpen: isEditConfigOpen, onOpen: onEditConfigOpen, onClose: onEditConfigClose } = useDisclosure();
@@ -490,72 +494,64 @@ const AdminDashboard = () => {
   };
 
   // New function to handle proposing a result for a market
+
   const handleProposeResult = async (marketId: number, winningOutcome: number) => {
-  if (!isWalletConnected) {
-    toast({
-      title: "Wallet not connected",
-      description: "Please connect your wallet to perform this action.",
-      status: "warning",
-      duration: 3000,
-      isClosable: true,
-    });
-    return;
-  }
-
-  try {
-    const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
-    const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-
-    if (!chainId || !contractAddress) {
-      throw new Error("Chain ID or Contract address not defined in environment variables");
+    if (!isWalletConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet to perform this action.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
     }
 
-    console.log("Preparing to propose result for market:", marketId);
+    try {
+      const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 
-    const msg = {
-      propose_result: {
-        market_id: marketId,
-        winning_outcome: winningOutcome
+      if (!chainId || !contractAddress) {
+        throw new Error("Chain ID or Contract address not defined in environment variables");
       }
-    };
 
-    // No funds are sent with this transaction
-    const funds: { denom: string; amount: string }[] = [];
+      console.log("Preparing to propose result for market:", marketId);
 
-    console.log("Sending transaction to propose result:", JSON.stringify(msg, null, 2));
+      const msg = {
+        propose_result: {
+          market_id: marketId,
+          winning_outcome: winningOutcome
+        }
+      };
 
-    const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
+      const funds: { denom: string; amount: string }[] = [];
 
-    // Custom JSON stringifier to handle BigInt
-    const bigIntStringifier = (key: string, value: any) => {
-      if (typeof value === 'bigint') {
-        return value.toString();
-      }
-      return value;
-    };
+      console.log("Sending transaction to propose result:", JSON.stringify(msg, null, 2));
 
-    console.log("Propose result result:", JSON.stringify(result, bigIntStringifier, 2));
+      const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
 
-    toast({
-      title: "Result Proposed",
-      description: `Result proposed for market ${marketId}. Transaction hash: ${result.transactionHash}`,
-      status: "success",
-      duration: 5000,
-      isClosable: true,
-    });
+      console.log("Propose result result:", JSON.stringify(result, null, 2));
 
-    fetchMarkets(); // Refresh the markets list
-  } catch (err) {
-    console.error("Error proposing result:", err);
-    toast({
-      title: "Error",
-      description: "Failed to propose result. " + (err instanceof Error ? err.message : "Unknown error occurred"),
-      status: "error",
-      duration: 5000,
-      isClosable: true,
-    });
-  }
-};
+      toast({
+        title: "Result Proposed",
+        description: `Result proposed for market ${marketId}. Transaction hash: ${result.transactionHash}`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+
+      fetchMarkets();
+    } catch (err) {
+      console.error("Error proposing result:", err);
+      toast({
+        title: "Error",
+        description: "Failed to propose result. " + (err instanceof Error ? err.message : "Unknown error occurred"),
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
   // New function to handle updating config
   const handleUpdateConfig = async () => {
@@ -744,52 +740,92 @@ const AdminDashboard = () => {
                       </HStack>
                       <Table variant="simple">
                         <Thead>
-                            <Tr>
+                          <Tr>
                             <Th>ID</Th>
                             <Th>Question</Th>
                             <Th>Status</Th>
+                            <Th>Closing Time</Th>
                             <Th>Actions</Th>
-                            </Tr>
+                          </Tr>
                         </Thead>
                         <Tbody>
-                            {filteredMarkets.map((market) => (
+                          {filteredMarkets.map((market) => (
                             <Tr key={market.id}>
-                                <Td>{market.id}</Td>
-                                <Td>{market.question}</Td>
-                                <Td>
+                              <Td>{market.id}</Td>
+                              <Td>{market.question}</Td>
+                              <Td>
                                 <Badge colorScheme={market.status === 'Active' ? 'green' : 'yellow'}>
-                                    {market.status}
+                                  {market.status}
                                 </Badge>
-                                </Td>
-                                <Td>
+                              </Td>
+                              <Td>{new Date(market.end_time * 1000).toLocaleString()}</Td>
+                              <Td>
                                 <HStack spacing={2}>
+                                  {market.status === 'Active' && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        bgGradient={gradientColor}
+                                        color="white"
+                                        _hover={{
+                                          bgGradient: "linear(to-r, blue.500, purple.600)",
+                                        }}
+                                        onClick={() => handleCancelMarket(market.id)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        bgGradient={gradientColor}
+                                        color="white"
+                                        _hover={{
+                                          bgGradient: "linear(to-r, blue.500, purple.600)",
+                                        }}
+                                        onClick={() => handleCloseMarket(market.id)}
+                                      >
+                                        Close
+                                      </Button>
+                                    </>
+                                  )}
+                                  {market.status === 'Closed' && (
                                     <Button
                                     size="sm"
-                                    colorScheme="red"
-                                    onClick={() => handleCancelMarket(market.id)}
-                                    >
-                                    Cancel
-                                    </Button>
-                                    <Button
-                                    size="sm"
-                                    colorScheme="yellow"
-                                    onClick={() => handleCloseMarket(market.id)}
-                                    >
-                                    Close
-                                    </Button>
-                                    <Button
-                                    size="sm"
-                                    colorScheme="green"
-                                    onClick={() => handleProposeResult(market.id, 0)} // You might want to add a modal for selecting the winning outcome
-                                    >
+                                    bgGradient={gradientColor}
+                                    color="white"
+                                    _hover={{
+                                      bgGradient: "linear(to-r, blue.500, purple.600)",
+                                    }}
+                                    onClick={() => onOpenProposeResult(market)}
+                                  >
                                     Propose Result
-                                    </Button>
+                                  </Button>
+                                  )}
                                 </HStack>
-                                </Td>
+                              </Td>
                             </Tr>
-                            ))}
+                          ))}
                         </Tbody>
-                        </Table>
+                      </Table>
+                      <Flex justifyContent="space-between" mt={4} alignItems="center">
+                        <Text>
+                          Showing {filteredMarkets.length} of {markets.length} markets
+                        </Text>
+                        <HStack>
+                          <Button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <Text>{currentPage}</Text>
+                          <Button
+                            onClick={() => setCurrentPage(prev => prev + 1)}
+                            disabled={currentPage * itemsPerPage >= markets.length}
+                          >
+                            Next
+                          </Button>
+                        </HStack>
+                      </Flex>
                     </Box>
                   </TabPanel>
                   <TabPanel>

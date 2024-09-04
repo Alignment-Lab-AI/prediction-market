@@ -50,11 +50,15 @@ import {
   FormControl,
   FormLabel,
   Tooltip,
+  Image,
+  Divider,
+  Progress,
+  Select,
 } from '@chakra-ui/react';
-import { FaWallet, FaChartBar, FaHistory, FaBell, FaTrophy, FaExchangeAlt, FaUserShield, FaEdit, FaInfoCircle } from 'react-icons/fa';
+import { FaWallet, FaChartBar, FaHistory, FaBell, FaTrophy, FaExchangeAlt, FaUserShield, FaEdit, FaInfoCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import axios from 'axios';
 import NextLink from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useWeb3 } from '../../contexts/Web3Context';
 import { encodeQuery } from '../../utils/queryUtils';
 
@@ -197,6 +201,8 @@ const UserProfilePage = () => {
     push: false,
     sms: false,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isWalletConnected, walletAddress } = useWeb3();
@@ -233,8 +239,8 @@ const UserProfilePage = () => {
         const orderQuery = {
           user_orders: {
             user: walletAddress,
-            start_after: 0,
-            limit: 100
+            start_after: (currentPage - 1) * itemsPerPage,
+            limit: itemsPerPage
           }
         };
         const encodedOrderQuery = encodeQuery(orderQuery);
@@ -242,8 +248,8 @@ const UserProfilePage = () => {
         const matchedBetQuery = {
           matched_bets: {
             user: walletAddress,
-            start_after: 0,
-            limit: 100
+            start_after: (currentPage - 1) * itemsPerPage,
+            limit: itemsPerPage
           }
         };
         const encodedMatchedBetQuery = encodeQuery(matchedBetQuery);
@@ -253,8 +259,8 @@ const UserProfilePage = () => {
           axios.get(`${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedMatchedBetQuery}`)
         ]);
 
-        setOrders(orderResponse.data.data);
-        setMatchedBets(matchedBetResponse.data.data);
+        setOrders(orderResponse.data.data.sort((a, b) => b.timestamp - a.timestamp));
+        setMatchedBets(matchedBetResponse.data.data.sort((a, b) => b.timestamp - a.timestamp));
 
         const totalBets = orderResponse.data.data.length + matchedBetResponse.data.data.length;
         const wonBets = matchedBetResponse.data.data.filter(bet => bet.redeemed).length;
@@ -288,7 +294,7 @@ const UserProfilePage = () => {
     };
 
     fetchData();
-  }, [toast, isWalletConnected, walletAddress]);
+  }, [toast, isWalletConnected, walletAddress, currentPage, itemsPerPage]);
 
   const handleNotificationToggle = (type: 'email' | 'push' | 'sms') => {
     setNotificationSettings(prev => ({
@@ -315,6 +321,15 @@ const UserProfilePage = () => {
     });
   };
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleItemsPerPageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(event.target.value));
+    setCurrentPage(1);
+  };
+
   if (isLoading) {
     return (
       <Box height="100vh" display="flex" alignItems="center" justifyContent="center" bg={bgColor}>
@@ -325,7 +340,7 @@ const UserProfilePage = () => {
 
   return (
     <ChakraProvider theme={theme}>
-      <Box bg="transparent" minHeight="100vh" py={12}>
+      <Box bg={bgColor} minHeight="100vh" py={12}>
         <Container maxW="container.xl">
           <VStack spacing={10} align="stretch">
             <MotionBox
@@ -333,61 +348,94 @@ const UserProfilePage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <Flex 
-                direction={{ base: 'column', md: 'row' }} 
-                justifyContent="space-between" 
-                alignItems="center" 
+              <Box
                 bg={cardBgColor}
-                backdropFilter="blur(10px)"
-                p={8} 
-                borderRadius="2xl" 
-                boxShadow="xl"
-                border="1px solid"
-                borderColor={borderColor}
+                borderRadius="3xl"
+                boxShadow="2xl"
+                overflow="hidden"
+                position="relative"
               >
-                <HStack spacing={6}>
-                  <Avatar size="2xl" name={userProfile.name} src={userProfile.avatar} bg={accentColor}>
-                    <AvatarBadge boxSize="1.25em" bg="green.500" />
-                  </Avatar>
-                  <VStack align="start" spacing={2}>
-                    <Heading size="2xl" bgGradient={gradientColor} bgClip="text">{userProfile.name}</Heading>
-                    <Text color="gray.500" fontSize="md">Prediction Market Enthusiast</Text>
-                    <Text color="gray.500" fontSize="sm" fontStyle="italic" isTruncated maxW="300px">
-                      {userProfile.walletAddress}
-                    </Text>
-                  </VStack>
-                </HStack>
-                <VStack align="end" spacing={4} mt={{ base: 6, md: 0 }}>
-                  <Button 
-                    leftIcon={<Icon as={FaEdit} />} 
-                    onClick={onOpen} 
-                    bgGradient={gradientColor}
-                    color="white"
-                    _hover={{
-                      bgGradient: "linear(to-r, blue.500, purple.600)",
-                    }}
-                    size="lg" 
+                <Box
+                  bgGradient={gradientColor}
+                  h="200px"
+                  position="relative"
+                  _before={{
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                    backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")',
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: '50px 50px', // Adjust this value to change the pattern size
+                    opacity: 5.1,
+                    mixBlendMode: 'overlay',
+                  }}
+                >
+                  <Box
+                    position="absolute"
+                    bottom="-50px"
+                    left="50px"
                     borderRadius="full"
+                    border="4px solid"
+                    borderColor={cardBgColor}
+                    boxShadow="lg"
                   >
-                    Edit Profile
-                  </Button>
-                  <NextLink href="/admin-dashboard" passHref>
-                    <Button 
-                      as="a" 
-                      leftIcon={<Icon as={FaUserShield} />} 
-                      colorScheme="purple" 
-                      size="lg" 
-                      borderRadius="full"
+                    <Avatar
+                      size="2xl"
+                      name={userProfile.name}
+                      src={userProfile.avatar}
+                      bg={accentColor}
                     >
-                      Admin Dashboard
-                    </Button>
-                  </NextLink>
-                </VStack>
-              </Flex>
+                      <AvatarBadge boxSize="1.25em" bg="green.500" />
+                    </Avatar>
+                  </Box>
+                </Box>
+                <Box p={8} pt={16}>
+                  <Flex justifyContent="space-between" alignItems="center">
+                    <VStack align="start" spacing={2}>
+                      <Heading size="2xl" bgGradient={gradientColor} bgClip="text">
+                        {userProfile.name}
+                      </Heading>
+                      <Text color="gray.500" fontSize="md">Prediction Market Enthusiast</Text>
+                      <Text color="gray.500" fontSize="sm" fontStyle="italic" isTruncated maxW="300px">
+                        {userProfile.walletAddress}
+                      </Text>
+                    </VStack>
+                    <VStack align="end" spacing={4}>
+                      <Button 
+                        leftIcon={<Icon as={FaEdit} />} 
+                        onClick={onOpen} 
+                        bgGradient={gradientColor}
+                        color="white"
+                        _hover={{
+                          bgGradient: "linear(to-r, blue.500, purple.600)",
+                        }}
+                        size="lg" 
+                        borderRadius="full"
+                      >
+                        Edit Profile
+                      </Button>
+                      <NextLink href="/admin-dashboard" passHref>
+                        <Button 
+                          as="a" 
+                          leftIcon={<Icon as={FaUserShield} />} 
+                          colorScheme="purple" 
+                          size="lg" 
+                          borderRadius="full"
+                        >
+                          Admin Dashboard
+                        </Button>
+                      </NextLink>
+                    </VStack>
+                  </Flex>
+                </Box>
+              </Box>
             </MotionBox>
 
             <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={8}>
-              {[
+            {[
                 { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} CMDX`, color: 'blue.400' },
                 { label: 'Total Bets', icon: FaChartBar, value: userProfile.totalBets, color: 'purple.500' },
                 { label: 'Win Rate', icon: FaTrophy, value: `${userProfile.winRate.toFixed(2)}%`, color: 'yellow.400', helpText: `${userProfile.wonBets} won / ${userProfile.lostBets} lost` },
@@ -432,11 +480,19 @@ const UserProfilePage = () => {
                     <StatNumber fontSize="3xl" fontWeight="bold" color={stat.color} mt={2}>
                       {stat.value}
                     </StatNumber>
-                    {stat.helpText && (<StatHelpText mt={2}>
+                    {stat.helpText && (
+                      <StatHelpText mt={2}>
                         <StatArrow type={userProfile.winRate > 50 ? 'increase' : 'decrease'} />
                         {stat.helpText}
                       </StatHelpText>
                     )}
+                    <Progress 
+                      value={stat.label === 'Win Rate' ? userProfile.winRate : 100} 
+                      colorScheme={stat.color.split('.')[0]}
+                      size="sm"
+                      mt={4}
+                      borderRadius="full"
+                    />
                   </Stat>
                 </MotionBox>
               ))}
@@ -490,6 +546,7 @@ const UserProfilePage = () => {
                                   <Th>Odds</Th>
                                   <Th>Filled Amount</Th>
                                   <Th>Status</Th>
+                                  <Th>Timestamp</Th>
                                 </Tr>
                               </Thead>
                               <Tbody>
@@ -509,6 +566,7 @@ const UserProfilePage = () => {
                                         {order.status}
                                       </Badge>
                                     </Td>
+                                    <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
                                   </Tr>
                                 ))}
                               </Tbody>
@@ -523,6 +581,7 @@ const UserProfilePage = () => {
                                   <Th>Odds</Th>
                                   <Th>Role</Th>
                                   <Th>Status</Th>
+                                  <Th>Timestamp</Th>
                                 </Tr>
                               </Thead>
                               <Tbody>
@@ -541,6 +600,7 @@ const UserProfilePage = () => {
                                         {bet.redeemed ? 'Redeemed' : 'Active'}
                                       </Badge>
                                     </Td>
+                                    <Td>{new Date(bet.timestamp * 1000).toLocaleString()}</Td>
                                   </Tr>
                                 ))}
                               </Tbody>
@@ -556,6 +616,7 @@ const UserProfilePage = () => {
                                   <Th>Odds</Th>
                                   <Th>Filled Amount</Th>
                                   <Th>Status</Th>
+                                  <Th>Timestamp</Th>
                                 </Tr>
                               </Thead>
                               <Tbody>
@@ -575,6 +636,7 @@ const UserProfilePage = () => {
                                         {order.status}
                                       </Badge>
                                     </Td>
+                                    <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
                                   </Tr>
                                 ))}
                               </Tbody>
@@ -582,6 +644,33 @@ const UserProfilePage = () => {
                           </TabPanel>
                         </TabPanels>
                       </Tabs>
+                      <Flex justifyContent="space-between" alignItems="center" mt={4}>
+                        <HStack>
+                          <Text>Items per page:</Text>
+                          <Select value={itemsPerPage} onChange={handleItemsPerPageChange} w="70px">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                          </Select>
+                        </HStack>
+                        <HStack>
+                          <Button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            isDisabled={currentPage === 1}
+                            leftIcon={<FaChevronLeft />}
+                          >
+                            Previous
+                          </Button>
+                          <Text>{`Page ${currentPage}`}</Text>
+                          <Button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            isDisabled={orders.length + matchedBets.length < itemsPerPage}
+                            rightIcon={<FaChevronRight />}
+                          >
+                            Next
+                          </Button>
+                        </HStack>
+                      </Flex>
                     </Box>
                   </TabPanel>
                   <TabPanel>
