@@ -720,7 +720,7 @@ const UserProfilePage = () => {
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="purple.500" />
-                    <Text><strong>Total Bets:</strong> The total number of bets you've placed, including active and past bets.</Text>
+                    <Text><strong>Total Bets:</strong> The total number of bets you have placed, including active and past bets.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="yellow.500" />

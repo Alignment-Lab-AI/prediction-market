@@ -104,6 +104,9 @@ const CreateMarketPage = () => {
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isWalletConnected, walletAddress } = useWeb3();
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+  const cardBgColor = useColorModeValue("white", "gray.800");
+  const gradientColor = useColorModeValue("linear(to-r, blue.400,purple.500)", "linear(to-r, blue.200, purple.300)");
 
   const { register, control, handleSubmit, watch, formState: { errors } } = useForm<MarketForm>({
     defaultValues: {
@@ -318,7 +321,9 @@ const CreateMarketPage = () => {
               {fields.map((field, index) => (
                 <Flex key={field.id} mb={2}>
                   <InputGroup size="sm">
-                    <InputLeftElement pointerEvents="none" children={<FiList color="gray.400" />} />
+                  <InputLeftElement pointerEvents="none">
+                    <FiList color="gray.400" />
+                  </InputLeftElement>
                     <Input
                       {...register(`options.${index}.value` as const, { required: "Option is required" })}
                       placeholder={`Option ${index + 1}`}
@@ -445,7 +450,7 @@ const CreateMarketPage = () => {
       );
     case 4:
       return (
-        <VStack align="stretch" spacing={3} bg={useColorModeValue("gray.50", "gray.700")} p={4} borderRadius="md">
+        <VStack align="stretch" spacing={3} bg={bgColor} p={4} borderRadius="md">
           <Heading size="sm" mb={2}>Market Summary</Heading>
           <Text fontSize="sm"><strong>Category:</strong> {watchedFields.category}</Text>
           <Text fontSize="sm"><strong>Question:</strong> {watchedFields.question}</Text>
@@ -470,9 +475,6 @@ const CreateMarketPage = () => {
   }
 };
 
-const bgColor = useColorModeValue("gray.50", "gray.900");
-const cardBgColor = useColorModeValue("white", "gray.800");
-const gradientColor = useColorModeValue("linear(to-r, blue.400, purple.500)", "linear(to-r, blue.200, purple.300)");
 const buttonBgColor = useColorModeValue("blue.500", "blue.200");
 const buttonHoverBgColor = useColorModeValue("blue.600", "blue.300");
 const inputBgColor = useColorModeValue("white", "gray.700");
@@ -581,7 +583,7 @@ return (
                       fontWeight="bold"
                       borderRadius="full"
                       _hover={{ 
-                        bgGradient: useColorModeValue("linear(to-r, blue.500, purple.600)", "linear(to-r, blue.300, purple.400)"),
+                        bgGradient: gradientColor,
                         transform: 'translateX(2px)', 
                         boxShadow: 'sm' 
                       }}
@@ -600,7 +602,7 @@ return (
                       fontWeight="bold"
                       borderRadius="full"
                       _hover={{ 
-                        bgGradient: useColorModeValue("linear(to-r, blue.500, purple.600)", "linear(to-r, blue.300, purple.400)"),
+                        bgGradient: gradientColor,
                         transform: 'translateY(-2px)', 
                         boxShadow: 'md' 
                       }}

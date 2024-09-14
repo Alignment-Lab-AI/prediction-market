@@ -787,19 +787,6 @@ const AdminDashboard = () => {
                                       </Button>
                                     </>
                                   )}
-                                  {market.status === 'Closed' && (
-                                    <Button
-                                    size="sm"
-                                    bgGradient={gradientColor}
-                                    color="white"
-                                    _hover={{
-                                      bgGradient: "linear(to-r, blue.500, purple.600)",
-                                    }}
-                                    onClick={() => onOpenProposeResult(market)}
-                                  >
-                                    Propose Result
-                                  </Button>
-                                  )}
                                 </HStack>
                               </Td>
                             </Tr>

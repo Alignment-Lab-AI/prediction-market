@@ -68,7 +68,7 @@ export default function Hero() {
               maxW="3xl"
               mx="auto"
             >
-                Welcome to PredictX, where your insights shape tomorrow's markets. 
+                Welcome to PredictX, where your insights shape tomorrow&apos;s markets. 
                 Harness the power of collective intelligence and turn your predictions into profitable opportunities.
             </MotionText>
           </MotionBox>

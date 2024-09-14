@@ -623,11 +623,11 @@ const MyBetsPage = () => {
                 <VStack align="start" spacing={4}>
                   <HStack>
                     <Icon as={FaInfoCircle} color="blue.500" />
-                    <Text><strong>Active Orders:</strong> These are your open orders that haven't been fully matched yet. You can cancel these at any time.</Text>
+                    <Text><strong>Active Orders:</strong> These are your open orders that have not been fully matched yet. You can cancel these at any time.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="green.500" />
-                    <Text><strong>Matched Bets:</strong> These are bets that have been matched with other users. You can't cancel these, but you can redeem winnings once the market is resolved.</Text>
+                    <Text><strong>Matched Bets:</strong> These are bets that have been matched with other users. You cannot cancel these, but you can redeem winnings once the market is resolved.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="purple.500" />

@@ -844,7 +844,7 @@ const MarketContent = ({ id }: { id: string }) => {
           >
             <MarketHeader market={market} />
             <MotionBox
-              bg={useColorModeValue('white', 'gray.800')}
+              bg={bgColor}
               p={6}
               borderRadius="xl"
               boxShadow="xl"

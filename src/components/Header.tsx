@@ -73,7 +73,6 @@ export default function Header() {
         backdropFilter={scrolled ? "blur(10px)" : "none"}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
       >
         <Container maxW="container.xl">
           <Flex

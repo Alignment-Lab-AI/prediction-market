@@ -9,11 +9,7 @@ import {
   Text,
   Input,
   IconButton,
-  Button,
   VStack,
-  HStack,
-  Heading,
-  Flex,
   useColorModeValue,
 } from '@chakra-ui/react';
 import { FaTwitter, FaFacebook, FaLinkedin, FaGithub } from 'react-icons/fa';
@@ -23,16 +19,18 @@ import { motion } from 'framer-motion';
 const MotionBox = motion(Box);
 
 const ListHeader = ({ children }) => {
+  const headerColor = useColorModeValue('gray.700', 'gray.200');
   return (
-    <Text fontWeight={'600'} fontSize={'lg'} mb={2} color={useColorModeValue('gray.700', 'gray.200')}>
+    <Text fontWeight={'600'} fontSize={'lg'} mb={2} color={headerColor}>
       {children}
     </Text>
   );
 };
 
 const FooterLink = ({ children, href }) => {
+  const linkHoverColor = useColorModeValue('blue.500', 'blue.200');
   return (
-    <Box as="a" href={href} _hover={{ color: useColorModeValue('blue.500', 'blue.200') }}>
+    <Box as="a" href={href} _hover={{ color: linkHoverColor }}>
       <Text fontSize="sm" fontWeight="medium">
         {children}
       </Text>
@@ -44,6 +42,18 @@ export default function Footer() {
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const iconBgColor = useColorModeValue('gray.100', 'gray.700');
+  const textColor = useColorModeValue('gray.700', 'gray.200');
+  const inputBgColor = useColorModeValue('white', 'gray.800');
+  const inputBorderColor = useColorModeValue('gray.300', 'gray.700');
+  const inputFocusBgColor = 'whiteAlpha.300';
+  const inputFocusBorderColor = useColorModeValue('blue.500', 'blue.200');
+  const subscribeButtonBgColor = useColorModeValue('blue.400', 'blue.800');
+  const subscribeButtonHoverBgColor = useColorModeValue('blue.500', 'blue.600');
+  const iconColor = useColorModeValue('gray.600', 'gray.400');
+  const iconHoverBgColor = useColorModeValue('gray.200', 'gray.600');
+  const iconHoverColor = useColorModeValue('gray.800', 'white');
+
+  const socialIcons = [FaTwitter, FaFacebook, FaLinkedin, FaGithub];
 
   return (
     <MotionBox
@@ -51,7 +61,7 @@ export default function Footer() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
       bg={bgColor}
-      color={useColorModeValue('gray.700', 'gray.200')}
+      color={textColor}
       borderTop={1}
       borderStyle={'solid'}
       borderColor={borderColor}
@@ -86,20 +96,20 @@ export default function Footer() {
             <Stack direction={'row'}>
               <Input
                 placeholder={'Your email address'}
-                bg={useColorModeValue('white', 'gray.800')}
+                bg={inputBgColor}
                 border={1}
-                borderColor={useColorModeValue('gray.300', 'gray.700')}
+                borderColor={inputBorderColor}
                 _focus={{
-                  bg: 'whiteAlpha.300',
-                  borderColor: useColorModeValue('blue.500', 'blue.200'),
+                  bg: inputFocusBgColor,
+                  borderColor: inputFocusBorderColor,
                 }}
                 borderRadius="full"
               />
               <IconButton
-                bg={useColorModeValue('blue.400', 'blue.800')}
+                bg={subscribeButtonBgColor}
                 color={'white'}
                 _hover={{
-                  bg: useColorModeValue('blue.500', 'blue.600'),
+                  bg: subscribeButtonHoverBgColor,
                 }}
                 aria-label="Subscribe"
                 icon={<EmailIcon />}
@@ -126,7 +136,7 @@ export default function Footer() {
         >
           <Text fontSize="sm">© 2024 PredictX. All rights reserved</Text>
           <Stack direction={'row'} spacing={6}>
-            {[FaTwitter, FaFacebook, FaLinkedin, FaGithub].map((icon, index) => (
+            {socialIcons.map((icon, index) => (
               <MotionBox
                 key={index}
                 whileHover={{ y: -3 }}
@@ -137,10 +147,10 @@ export default function Footer() {
                   icon={<Box as={icon} />}
                   size="sm"
                   bg={iconBgColor}
-                  color={useColorModeValue('gray.600', 'gray.400')}
+                  color={iconColor}
                   _hover={{
-                    bg: useColorModeValue('gray.200', 'gray.600'),
-                    color: useColorModeValue('gray.800', 'white'),
+                    bg: iconHoverBgColor,
+                    color: iconHoverColor,
                   }}
                   borderRadius="full"
                 />

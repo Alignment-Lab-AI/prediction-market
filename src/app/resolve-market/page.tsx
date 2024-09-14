@@ -127,6 +127,8 @@ const ResolveMarketPage = () => {
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const accentColor = "blue.400";
   const gradientColor = "linear(to-r, blue.400, purple.500)";
+  const stepIconBgColor = useColorModeValue("blue.100", "blue.900");
+  const stepTextColor = useColorModeValue("gray.600", "gray.400");
 
   const fetchMarkets = async () => {
     try {
@@ -363,7 +365,6 @@ const ResolveMarketPage = () => {
       _hover={{ transform: 'translateY(-5px)', boxShadow: '2xl' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
     >
       <VStack align="stretch" spacing={4}>
         <Heading size="md" noOfLines={2}>{market.question}</Heading>
@@ -458,7 +459,7 @@ const ResolveMarketPage = () => {
           <HStack key={index} spacing={4} align="start">
             <Box
               borderRadius="full"
-              bg={useColorModeValue("blue.100", "blue.900")}
+              bg={stepIconBgColor}
               p={3}
               color={accentColor}
             >
@@ -466,7 +467,7 @@ const ResolveMarketPage = () => {
             </Box>
             <VStack align="start" spacing={1}>
               <Text fontWeight="bold">{step.title}</Text>
-              <Text fontSize="sm" color={useColorModeValue("gray.600", "gray.400")}>
+              <Text fontSize="sm" color={stepTextColor}>
                 {step.description}
               </Text>
             </VStack>
