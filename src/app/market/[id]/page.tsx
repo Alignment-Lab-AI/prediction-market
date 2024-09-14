@@ -235,7 +235,7 @@ const OrderBook = ({
               cursor="pointer" 
               onClick={() => onSelectOdds(order.odds / 100, 'back')}
             >
-              <Box flex={1}>{(parseInt(order.amount-order.filled_amount) / 1000000).toFixed(2)}</Box>
+              <Box flex={1}>{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
               <Box flex={1} textAlign="right" fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
             </Flex>
           ))}
@@ -261,7 +261,7 @@ const OrderBook = ({
               onClick={() => onSelectOdds(order.odds / 100, 'lay')}
             >
               <Box flex={1} fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
-              <Box flex={1} textAlign="right">{(parseInt(order.amount-order.filled_amount) / 1000000).toFixed(2)}</Box>
+              <Box flex={1} textAlign="right">{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
             </Flex>
           ))}
           {[...Array(3 - layOrders.length)].map((_, index) => (
@@ -633,7 +633,9 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
                       {order.side}
                     </Badge>
                   </Td>
-                  <Td isNumeric>{(parseInt(order.amount-order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                  <Td isNumeric>
+                    {((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)} CMDX
+                  </Td>
                   <Td isNumeric>{(order.odds / 100).toFixed(2)}</Td>
                   <Td>
                     <Badge colorScheme={getStatusColor(order.status)}>

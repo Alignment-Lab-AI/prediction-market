@@ -60,11 +60,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
             coinMinimalDenom: "ucmdx",
             coinDecimals: 6,
           },
-          gasPriceStep: {
-            low: 0.01,
-            average: 0.025,
-            high: 0.04,
-          },
         });
 
         await window.keplr.enable(COMDEX_CHAIN_ID);
