@@ -37,6 +37,12 @@ import {
   ModalCloseButton,
   useDisclosure,
   Select,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
+  useBreakpointValue,
+  Portal,
 } from '@chakra-ui/react';
 import axios from 'axios';
 import { AddIcon, DeleteIcon, ChevronRightIcon, ChevronLeftIcon } from '@chakra-ui/icons';
@@ -107,6 +113,7 @@ const CreateMarketPage = () => {
   const bgColor = useColorModeValue("gray.50", "gray.900");
   const cardBgColor = useColorModeValue("white", "gray.800");
   const gradientColor = useColorModeValue("linear(to-r, blue.400,purple.500)", "linear(to-r, blue.200, purple.300)");
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   const { register, control, handleSubmit, watch, formState: { errors } } = useForm<MarketForm>({
     defaultValues: {
@@ -321,9 +328,9 @@ const CreateMarketPage = () => {
               {fields.map((field, index) => (
                 <Flex key={field.id} mb={2}>
                   <InputGroup size="sm">
-                  <InputLeftElement pointerEvents="none">
-                    <FiList color="gray.400" />
-                  </InputLeftElement>
+                    <InputLeftElement pointerEvents="none">
+                      <FiList color="gray.400" />
+                    </InputLeftElement>
                     <Input
                       {...register(`options.${index}.value` as const, { required: "Option is required" })}
                       placeholder={`Option ${index + 1}`}
@@ -369,297 +376,325 @@ const CreateMarketPage = () => {
             <FormControl isInvalid={!!errors.startDate || !!errors.startTime}>
               <FormLabel fontSize="sm" fontWeight="semibold">Start Time</FormLabel>
               <HStack>
-                <Controller
-                  control={control}
-                  name="startDate"
-                  render={({ field }) => (
-                    <SingleDatepicker
-                      name="start-date"
-                      date={field.value}
-                      onDateChange={field.onChange}
-                    />
-                  )}
-                />
-                <Input
-                  type="time"
-                  {...register("startTime", { required: "Start time is required" })}
-                  size="sm"
-                  borderRadius="md"
-                />
-              </HStack>
-              <FormErrorMessage fontSize="xs">{errors.startDate?.message || errors.startTime?.message}</FormErrorMessage>
-              <FormHelperText fontSize="xs">Choose when your market will open for predictions.</FormHelperText>
-            </FormControl>
-
-            <FormControl isInvalid={!!errors.endDate || !!errors.endTime}>
-              <FormLabel fontSize="sm" fontWeight="semibold">End Time</FormLabel>
-              <HStack>
-                <Controller
-                  control={control}
-                  name="endDate"
-                  render={({ field }) => (
-                    <SingleDatepicker
-                    name="end-date"
-                    date={field.value}
-                    onDateChange={field.onChange}
-                    minDate={watchedFields.startDate}
+                <Popover>
+                  <PopoverTrigger>
+                    <Button size="sm" rightIcon={<FiCalendar />}>
+                      {watchedFields.startDate.toLocaleDateString()}
+                    </Button>
+                  </PopoverTrigger>
+                  <Portal>
+                    <PopoverContent>
+                      <PopoverBody>
+                        <Controller
+                          control={control}
+                          name="startDate"
+                          render={({ field }) => (
+                            <SingleDatepicker
+                              name="start-date"
+                              date={field.value}
+                              onDateChange={field.onChange}
+                              />
+                            )}
+                          />
+                        </PopoverBody>
+                      </PopoverContent>
+                    </Portal>
+                  </Popover>
+                  <Input
+                    type="time"
+                    {...register("startTime", { required: "Start time is required" })}
+                    size="sm"
+                    borderRadius="md"
                   />
-                )}
-              />
-              <Input
-                type="time"
-                {...register("endTime", { required: "End time is required" })}
-                size="sm"
-                borderRadius="md"
-              />
-            </HStack>
-            <FormErrorMessage fontSize="xs">{errors.endDate?.message || errors.endTime?.message}</FormErrorMessage>
-            <FormHelperText fontSize="xs">Set when your market will close for final resolution.</FormHelperText>
-          </FormControl>
-        </VStack>
-      );
-    case 3:
-      return (
-        <VStack spacing={4} align="stretch">
-          <FormControl isInvalid={!!errors.resolutionBond}>
-            <FormLabel fontSize="sm" fontWeight="semibold">Resolution Bond (CMDX)</FormLabel>
-            <NumberInput min={0} precision={2} size="sm">
-              <NumberInputField {...register("resolutionBond", { required: "Resolution bond is required" })} borderRadius="md" />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-            <FormErrorMessage fontSize="xs">{errors.resolutionBond?.message}</FormErrorMessage>
-            <FormHelperText fontSize="xs">Set the amount of CMDX required as a resolution bond for this market.</FormHelperText>
-          </FormControl>
-
-          <FormControl isInvalid={!!errors.resolutionReward}>
-            <FormLabel fontSize="sm" fontWeight="semibold">Resolution Reward (CMDX)</FormLabel>
-            <NumberInput min={0} precision={2} size="sm">
-              <NumberInputField {...register("resolutionReward", { required: "Resolution reward is required" })} borderRadius="md" />
-              <NumberInputStepper>
-                <NumberIncrementStepper />
-                <NumberDecrementStepper />
-              </NumberInputStepper>
-            </NumberInput>
-            <FormErrorMessage fontSize="xs">{errors.resolutionReward?.message}</FormErrorMessage>
-            <FormHelperText fontSize="xs">Specify the reward amount for resolving this market.</FormHelperText>
-          </FormControl>
-        </VStack>
-      );
-    case 4:
-      return (
-        <VStack align="stretch" spacing={3} bg={bgColor} p={4} borderRadius="md">
-          <Heading size="sm" mb={2}>Market Summary</Heading>
-          <Text fontSize="sm"><strong>Category:</strong> {watchedFields.category}</Text>
-          <Text fontSize="sm"><strong>Question:</strong> {watchedFields.question}</Text>
-          <Text fontSize="sm"><strong>Description:</strong> {watchedFields.description}</Text>
-          <Divider my={2} />
-          <Text fontSize="sm" fontWeight="bold">Options:</Text>
-          <Flex flexWrap="wrap" gap={2}>
-            {watchedFields.options.map((o, index) => (
-              <Badge key={index} colorScheme="blue" px={2} py={1} borderRadius="full" fontSize="xs">{o.value}</Badge>
-            ))}
-          </Flex>
-          <Divider my={2} />
-          <Text fontSize="sm"><strong>Start Time:</strong> {`${watchedFields.startDate?.toLocaleDateString()} ${watchedFields.startTime}`}</Text>
-          <Text fontSize="sm"><strong>End Time:</strong> {`${watchedFields.endDate?.toLocaleDateString()} ${watchedFields.endTime}`}</Text>
-          <Divider my={2} />
-          <Text fontSize="sm"><strong>Resolution Bond:</strong> {watchedFields.resolutionBond} CMDX</Text>
-          <Text fontSize="sm"><strong>Resolution Reward:</strong> {watchedFields.resolutionReward} CMDX</Text>
-        </VStack>
-      );
-    default:
-      return null;
-  }
-};
-
-const buttonBgColor = useColorModeValue("blue.500", "blue.200");
-const buttonHoverBgColor = useColorModeValue("blue.600", "blue.300");
-const inputBgColor = useColorModeValue("white", "gray.700");
-const inputBorderColor = useColorModeValue("gray.200", "gray.600");
-
-return (
-  <Box
-    bg="transparent"
-    minHeight="100vh"
-    py={8}
-  >
-    <Container maxW="container.md">
-      <VStack spacing={8} align="stretch">
-        <Heading 
-          textAlign="center" 
-          fontSize="4xl" 
-          fontWeight="extrabold" 
-          bgGradient={gradientColor} 
-          bgClip="text" 
-          letterSpacing="tight"
-          mb={4}
-        >
-          Create New Market
-        </Heading>
-        
-        <GlassBox p={6}>
-          <Box position="relative">
-            <HStack justify="center" spacing={4} mb={6}>
-              {steps.map((step, index) => (
-                <Tooltip key={index} label={step.title} hasArrow placement="top">
-                  <Button
-                    onClick={() => setCurrentStep(index)}
-                    bg={currentStep >= index ? buttonBgColor : "transparent"}
-                    color={currentStep >= index ? "white" : "gray.500"}
-                    _hover={{
-                      bg: currentStep >= index ? buttonHoverBgColor : "rgba(255, 255, 255, 0.1)",
-                    }}
-                    borderRadius="full"
-                    size="sm"
-                    fontWeight="bold"
-                    transition="all 0.3s"
-                    boxShadow={currentStep >= index ? "0 0 10px rgba(66, 153, 225, 0.5)" : "none"}
-                  >
-                    <Box as={step.icon} fontSize="1.2em" />
-                  </Button>
-                </Tooltip>
-              ))}
-            </HStack>
-
-            <Box position="relative" h="2px" mb={6}>
-              <Box
-                position="absolute"
-                top="0"
-                left="0"
-                width="100%"
-                height="100%"
-                bg="gray.200"
-                borderRadius="full"
-              />
-              <Box
-                position="absolute"
-                top="0"
-                left="0"
-                width={`${((currentStep + 1) / steps.length) * 100}%`}
-                height="100%"
-                bgGradient={gradientColor}
-                borderRadius="full"
-                transition="width 0.3s ease-in-out"
-              />
-            </Box>
-
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <Box
-                minHeight="300px"
-                display="flex"
-                flexDirection="column"
-                justifyContent="space-between"
-              >
-                {renderStepContent(currentStep)}
-                
-                <HStack justify="space-between" mt={6}>
-                  <Button
-                    onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
-                    leftIcon={<ChevronLeftIcon />}
-                    isDisabled={currentStep === 0}
-                    variant="outline"
-                    size="sm"
-                    fontWeight="bold"
-                    borderRadius="full"
-                    _hover={{ 
-                      transform: 'translateX(-2px)', 
-                      boxShadow: 'sm',
-                      bg: useColorModeValue('gray.100', 'gray.700')
-                    }}
-                    transition="all 0.3s"
-                  >
-                    Previous
-                  </Button>
-                  {currentStep < steps.length - 1 ? (
-                    <Button
-                      onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
-                      rightIcon={<ChevronRightIcon />}
-                      bgGradient={gradientColor}
-                      color="white"
-                      size="sm"
-                      fontWeight="bold"
-                      borderRadius="full"
-                      _hover={{ 
-                        bgGradient: gradientColor,
-                        transform: 'translateX(2px)', 
-                        boxShadow: 'sm' 
-                      }}
-                      transition="all 0.3s"
-                    >
-                      Next
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={handleSubmit(onSubmit)}
-                      isLoading={isSubmitting}
-                      loadingText="Creating"
-                      bgGradient={gradientColor}
-                      color="white"
-                      size="sm"
-                      fontWeight="bold"
-                      borderRadius="full"
-                      _hover={{ 
-                        bgGradient: gradientColor,
-                        transform: 'translateY(-2px)', 
-                        boxShadow: 'md' 
-                      }}
-                      transition="all 0.3s"
-                    >
-                      Create Market
-                    </Button>
-                  )}
                 </HStack>
-              </Box>
-            </form>
-          </Box>
-        </GlassBox>
-      </VStack>
-    </Container>
-
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay backdropFilter="blur(5px)" />
-      <ModalContent borderRadius="xl" bg={cardBgColor}>
-        <ModalHeader 
-          bgGradient={gradientColor} 
-          bgClip="text" 
-          fontWeight="bold"
-          fontSize="xl"
-          pb={4}
-        >
-          Not Whitelisted
-        </ModalHeader>
-        <ModalCloseButton />
-        <ModalBody py={6}>
-          <VStack spacing={4} align="stretch">
-            <Text fontSize="sm">
-              Your address is not whitelisted to create markets. Please contact the team to get your address whitelisted.
-            </Text>
-            <Button 
-              bgGradient={gradientColor}
-              color="white"
-              onClick={() => window.open('mailto:support@predictx.com')}
-              rightIcon={<FiAlertTriangle />}
-              size="sm"
-              fontWeight="bold"
-              borderRadius="full"
-              _hover={{ 
-                bgGradient: useColorModeValue("linear(to-r, blue.500, purple.600)", "linear(to-r, blue.300, purple.400)"),
-                transform: 'translateY(-2px)', 
-                boxShadow: 'sm' 
-              }}
-              transition="all 0.3s"
+                <FormErrorMessage fontSize="xs">{errors.startDate?.message || errors.startTime?.message}</FormErrorMessage>
+                <FormHelperText fontSize="xs">Choose when your market will open for predictions.</FormHelperText>
+              </FormControl>
+  
+              <FormControl isInvalid={!!errors.endDate || !!errors.endTime}>
+                <FormLabel fontSize="sm" fontWeight="semibold">End Time</FormLabel>
+                <HStack>
+                  <Popover>
+                    <PopoverTrigger>
+                      <Button size="sm" rightIcon={<FiCalendar />}>
+                        {watchedFields.endDate.toLocaleDateString()}
+                      </Button>
+                    </PopoverTrigger>
+                    <Portal>
+                      <PopoverContent>
+                        <PopoverBody>
+                          <Controller
+                            control={control}
+                            name="endDate"
+                            render={({ field }) => (
+                              <SingleDatepicker
+                                name="end-date"
+                                date={field.value}
+                                onDateChange={field.onChange}
+                                minDate={watchedFields.startDate}
+                              />
+                            )}
+                          />
+                        </PopoverBody>
+                      </PopoverContent>
+                    </Portal>
+                  </Popover>
+                  <Input
+                    type="time"
+                    {...register("endTime", { required: "End time is required" })}
+                    size="sm"
+                    borderRadius="md"
+                  />
+                </HStack>
+                <FormErrorMessage fontSize="xs">{errors.endDate?.message || errors.endTime?.message}</FormErrorMessage>
+                <FormHelperText fontSize="xs">Set when your market will close for final resolution.</FormHelperText>
+              </FormControl>
+            </VStack>
+          );
+        case 3:
+          return (
+            <VStack spacing={4} align="stretch">
+              <FormControl isInvalid={!!errors.resolutionBond}>
+                <FormLabel fontSize="sm" fontWeight="semibold">Resolution Bond (CMDX)</FormLabel>
+                <NumberInput min={0} precision={2} size="sm">
+                  <NumberInputField {...register("resolutionBond", { required: "Resolution bond is required" })} borderRadius="md" />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+                <FormErrorMessage fontSize="xs">{errors.resolutionBond?.message}</FormErrorMessage>
+                <FormHelperText fontSize="xs">Set the amount of CMDX required as a resolution bond for this market.</FormHelperText>
+              </FormControl>
+  
+              <FormControl isInvalid={!!errors.resolutionReward}>
+                <FormLabel fontSize="sm" fontWeight="semibold">Resolution Reward (CMDX)</FormLabel>
+                <NumberInput min={0} precision={2} size="sm">
+                  <NumberInputField {...register("resolutionReward", { required: "Resolution reward is required" })} borderRadius="md" />
+                  <NumberInputStepper>
+                    <NumberIncrementStepper />
+                    <NumberDecrementStepper />
+                  </NumberInputStepper>
+                </NumberInput>
+                <FormErrorMessage fontSize="xs">{errors.resolutionReward?.message}</FormErrorMessage>
+                <FormHelperText fontSize="xs">Specify the reward amount for resolving this market.</FormHelperText>
+              </FormControl>
+            </VStack>
+          );
+        case 4:
+          return (
+            <VStack align="stretch" spacing={3} bg={bgColor} p={4} borderRadius="md">
+              <Heading size="sm" mb={2}>Market Summary</Heading>
+              <Text fontSize="sm"><strong>Category:</strong> {watchedFields.category}</Text>
+              <Text fontSize="sm"><strong>Question:</strong> {watchedFields.question}</Text>
+              <Text fontSize="sm"><strong>Description:</strong> {watchedFields.description}</Text>
+              <Divider my={2} />
+              <Text fontSize="sm" fontWeight="bold">Options:</Text>
+              <Flex flexWrap="wrap" gap={2}>
+                {watchedFields.options.map((o, index) => (
+                  <Badge key={index} colorScheme="blue" px={2} py={1} borderRadius="full" fontSize="xs">{o.value}</Badge>
+                ))}
+              </Flex>
+              <Divider my={2} />
+              <Text fontSize="sm"><strong>Start Time:</strong> {`${watchedFields.startDate?.toLocaleDateString()} ${watchedFields.startTime}`}</Text>
+              <Text fontSize="sm"><strong>End Time:</strong> {`${watchedFields.endDate?.toLocaleDateString()} ${watchedFields.endTime}`}</Text>
+              <Divider my={2} />
+              <Text fontSize="sm"><strong>Resolution Bond:</strong> {watchedFields.resolutionBond} CMDX</Text>
+              <Text fontSize="sm"><strong>Resolution Reward:</strong> {watchedFields.resolutionReward} CMDX</Text>
+            </VStack>
+          );
+        default:
+          return null;
+      }
+    };
+  
+    const buttonBgColor = useColorModeValue("blue.500", "blue.200");
+    const buttonHoverBgColor = useColorModeValue("blue.600", "blue.300");
+    const inputBgColor = useColorModeValue("white", "gray.700");
+    const inputBorderColor = useColorModeValue("gray.200", "gray.600");
+  
+    return (
+      <Box
+        bg="transparent"
+        minHeight="100vh"
+        py={8}
+      >
+        <Container maxW="container.md">
+          <VStack spacing={8} align="stretch">
+            <Heading 
+              textAlign="center" 
+              fontSize={{ base: "3xl", md: "4xl" }} 
+              fontWeight="extrabold" 
+              bgGradient={gradientColor} 
+              bgClip="text" 
+              letterSpacing="tight"
+              mb={4}
             >
-              Contact Support
-            </Button>
+              Create New Market
+            </Heading>
+            
+            <GlassBox p={{ base: 4, md: 6 }}>
+              <Box position="relative">
+                <HStack justify="center" spacing={{ base: 2, md: 4 }} mb={6} overflowX="auto" py={2}>
+                  {steps.map((step, index) => (
+                    <Tooltip key={index} label={step.title} hasArrow placement="top">
+                      <Button
+                        onClick={() => setCurrentStep(index)}
+                        bg={currentStep >= index ? buttonBgColor : "transparent"}
+                        color={currentStep >= index ? "white" : "gray.500"}
+                        _hover={{
+                          bg: currentStep >= index ? buttonHoverBgColor : "rgba(255, 255, 255, 0.1)",
+                        }}
+                        borderRadius="full"
+                        size="sm"
+                        fontWeight="bold"
+                        transition="all 0.3s"
+                        boxShadow={currentStep >= index ? "0 0 10px rgba(66, 153, 225, 0.5)" : "none"}
+                        minW={isMobile ? "40px" : "auto"}
+                      >
+                        <Box as={step.icon} fontSize="1.2em" />
+                        {!isMobile && <Text ml={2}>{step.title}</Text>}
+                      </Button>
+                    </Tooltip>
+                  ))}
+                </HStack>
+  
+                <Box position="relative" h="2px" mb={6}>
+                  <Box
+                    position="absolute"
+                    top="0"
+                    left="0"
+                    width="100%"
+                    height="100%"
+                    bg="gray.200"
+                    borderRadius="full"
+                  />
+                  <Box
+                    position="absolute"
+                    top="0"
+                    left="0"
+                    width={`${((currentStep + 1) / steps.length) * 100}%`}
+                    height="100%"
+                    bgGradient={gradientColor}
+                    borderRadius="full"
+                    transition="width 0.3s ease-in-out"
+                  />
+                </Box>
+  
+                <form onSubmit={handleSubmit(onSubmit)}>
+                  <Box
+                    minHeight="300px"
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="space-between"
+                  >
+                    {renderStepContent(currentStep)}
+                    
+                    <HStack justify="space-between" mt={6}>
+                      <Button
+                        onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+                        leftIcon={<ChevronLeftIcon />}
+                        isDisabled={currentStep === 0}
+                        variant="outline"
+                        size="sm"
+                        fontWeight="bold"
+                        borderRadius="full"
+                        _hover={{ 
+                          transform: 'translateX(-2px)', 
+                          boxShadow: 'sm',
+                          bg: useColorModeValue('gray.100', 'gray.700')
+                        }}
+                        transition="all 0.3s"
+                      >
+                        Previous
+                      </Button>
+                      {currentStep < steps.length - 1 ? (
+                        <Button
+                          onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
+                          rightIcon={<ChevronRightIcon />}
+                          bgGradient={gradientColor}
+                          color="white"
+                          size="sm"
+                          fontWeight="bold"
+                          borderRadius="full"
+                          _hover={{ 
+                            bgGradient: gradientColor,
+                            transform: 'translateX(2px)', 
+                            boxShadow: 'sm' 
+                          }}
+                          transition="all 0.3s"
+                        >
+                          Next
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleSubmit(onSubmit)}
+                          isLoading={isSubmitting}
+                          loadingText="Creating"
+                          bgGradient={gradientColor}
+                          color="white"
+                          size="sm"
+                          fontWeight="bold"
+                          borderRadius="full"
+                          _hover={{ 
+                            bgGradient: gradientColor,
+                            transform: 'translateY(-2px)', 
+                            boxShadow: 'md' 
+                          }}
+                          transition="all 0.3s"
+                        >
+                          Create Market
+                        </Button>
+                      )}
+                    </HStack>
+                  </Box>
+                </form>
+              </Box>
+            </GlassBox>
           </VStack>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
-  </Box>
-);
-};
-
-export default CreateMarketPage;
+        </Container>
+  
+        <Modal isOpen={isOpen} onClose={onClose}>
+          <ModalOverlay backdropFilter="blur(5px)" />
+          <ModalContent borderRadius="xl" bg={cardBgColor}>
+            <ModalHeader 
+              bgGradient={gradientColor} 
+              bgClip="text" 
+              fontWeight="bold"
+              fontSize="xl"
+              pb={4}
+            >
+              Not Whitelisted
+            </ModalHeader>
+            <ModalCloseButton />
+            <ModalBody py={6}>
+              <VStack spacing={4} align="stretch">
+                <Text fontSize="sm">
+                  Your address is not whitelisted to create markets. Please contact the team to get your address whitelisted.
+                </Text>
+                <Button 
+                  bgGradient={gradientColor}
+                  color="white"
+                  onClick={() => window.open('mailto:support@predictx.com')}
+                  rightIcon={<FiAlertTriangle />}
+                  size="sm"
+                  fontWeight="bold"
+                  borderRadius="full"
+                  _hover={{ 
+                    bgGradient: useColorModeValue("linear(to-r, blue.500, purple.600)", "linear(to-r, blue.300, purple.400)"),
+                    transform: 'translateY(-2px)', 
+                    boxShadow: 'sm' 
+                  }}
+                  transition="all 0.3s"
+                >
+                  Contact Support
+                </Button>
+              </VStack>
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+      </Box>
+    );
+  };
+  
+  export default CreateMarketPage;
