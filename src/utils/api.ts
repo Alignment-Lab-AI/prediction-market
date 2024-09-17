@@ -28,7 +28,7 @@ export const fetchConfig = async () => {
   console.log("Fetching config...");
   try {
     const query = {
-      get_config: {}
+      config: {}
     };
     const encodedQuery = encodeQuery(query);
     const response = await axios.get(
