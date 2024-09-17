@@ -8,8 +8,10 @@ export const fetchMarkets = async () => {
   console.log("Fetching markets...");
   try {
     const query = {
-      query_markets_by_status: {
-        status_code: 0 // Assuming 0 is for active markets
+      query_markets: {
+        status: "Active",
+        start_after: 0,
+        limit: 10
       }
     };
     const encodedQuery = encodeQuery(query);
