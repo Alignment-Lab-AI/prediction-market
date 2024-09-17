@@ -6,7 +6,8 @@ import {
   Box, Container, Input, InputGroup, InputLeftElement, Button, Flex, Text,
   SimpleGrid, VStack, HStack, Badge, Icon, useColorModeValue, Spinner,
   Tabs, TabList, Tab, IconButton, Tooltip, Heading, chakra, Table,
-  Thead, Tbody, Tr, Th, Td, useTheme, Alert, AlertIcon, Divider
+  Thead, Tbody, Tr, Th, Td, useTheme, Alert, AlertIcon, Divider,
+  useBreakpointValue
 } from '@chakra-ui/react';
 import { SearchIcon, ViewIcon } from '@chakra-ui/icons';
 import { FaUsers, FaClock, FaCoins, FaRocket, FaList, FaChartLine } from 'react-icons/fa';
@@ -29,7 +30,7 @@ interface Market {
     resolution_bond: string;
     resolution_reward: string;
     result: null | string;
-  }
+}
 
 const GlassBox = chakra(Box, {
   baseStyle: {
@@ -157,7 +158,7 @@ const MarketCard = ({ market }: { market: Market }) => {
         </Flex>
       </GlassBox>
     );
-  };
+};
 
 const MarketListItem = ({ market }: { market: Market }) => {
   const textColor = useColorModeValue('gray.700', 'white');
@@ -202,6 +203,8 @@ const MarketsPage = () => {
     const [isListView, setIsListView] = useState(false);
     const [startAfter, setStartAfter] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+
+    const isMobile = useBreakpointValue({ base: true, md: false });
   
     const fetchMarkets = async () => {
       try {
@@ -226,7 +229,7 @@ const MarketsPage = () => {
         );
   
         const newMarkets = response.data.data;
-        setMarkets(newMarkets); // Replace markets instead of appending
+        setMarkets(prevMarkets => [...prevMarkets, ...newMarkets]);
         setStartAfter(newMarkets[newMarkets.length - 1]?.id || 0);
         setHasMore(newMarkets.length === 10);
         setIsLoading(false);
@@ -259,17 +262,18 @@ const MarketsPage = () => {
     <Box bg="transparent" minHeight="100vh" py={12}>
       <Container maxW="container.xl">
         <VStack spacing={8} align="stretch">
-          <Flex justify="space-between" align="center" mb={8}>
+          <Flex justify="space-between" align="center" mb={8} flexDirection={isMobile ? 'column' : 'row'}>
             <Heading 
-              fontSize="4xl" 
+              fontSize={{ base: "3xl", md: "4xl" }}
               bgGradient="linear(to-r, blue.400, purple.500)"
               bgClip="text"
               fontWeight="extrabold"
+              mb={isMobile ? 4 : 0}
             >
               Explore Markets
             </Heading>
-            <HStack spacing={4}>
-              <InputGroup maxW="md">
+            <HStack spacing={4} width={isMobile ? "100%" : "auto"}>
+              <InputGroup maxW={isMobile ? "100%" : "md"}>
                 <InputLeftElement pointerEvents="none">
                   <SearchIcon color="gray.300" />
                 </InputLeftElement>
@@ -323,22 +327,24 @@ const MarketsPage = () => {
           ) : (
             <>
               {isListView ? (
-                <Table variant="simple">
-                  <Thead>
-                    <Tr>
-                      <Th>Market</Th>
-                      <Th isNumeric>Volume</Th>
-                      <Th>Status</Th>
-                      <Th>Time Remaining</Th>
-                      <Th>Action</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {filteredMarkets.map(market => (
-                      <MarketListItem key={market.id} market={market} />
-                    ))}
-                  </Tbody>
-                </Table>
+                <Box overflowX="auto">
+                  <Table variant="simple">
+                    <Thead>
+                      <Tr>
+                        <Th>Market</Th>
+                        <Th isNumeric>Volume</Th>
+                        <Th>Status</Th>
+                        <Th>Time Remaining</Th>
+                        <Th>Action</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {filteredMarkets.map(market => (
+                        <MarketListItem key={market.id} market={market} />
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
               ) : (
                 <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8} minHeight="400px">
                   <AnimatePresence>
@@ -357,13 +363,13 @@ const MarketsPage = () => {
                 </SimpleGrid>
               )}
 
-{filteredMarkets.length === 0 && (
+              {filteredMarkets.length === 0 && (
                 <Text textAlign="center" color={textColor} fontSize="xl">
                   No markets found matching your criteria.
                 </Text>
               )}
 
-              {hasMore && (
+{hasMore && (
                 <Flex justify="center" mt={12}>
                   <Button
                     onClick={loadMore}
