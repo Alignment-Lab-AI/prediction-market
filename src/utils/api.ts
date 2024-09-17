@@ -8,7 +8,7 @@ export const fetchMarkets = async () => {
   console.log("Fetching markets...");
   try {
     const query = {
-      query_markets: {
+      markets: {
         status: "Active",
         start_after: 0,
         limit: 10
