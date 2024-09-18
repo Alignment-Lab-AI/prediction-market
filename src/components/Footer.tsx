@@ -10,7 +10,9 @@ import {
   Input,
   IconButton,
   VStack,
+  HStack,
   useColorModeValue,
+  Flex,
 } from '@chakra-ui/react';
 import { FaTwitter, FaFacebook, FaLinkedin, FaGithub } from 'react-icons/fa';
 import { EmailIcon } from '@chakra-ui/icons';
@@ -67,7 +69,7 @@ export default function Footer() {
       borderColor={borderColor}
     >
       <Container as={Stack} maxW={'6xl'} py={10}>
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={8}>
+        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={8}>
           <Stack align={'flex-start'}>
             <ListHeader>PredictX</ListHeader>
             <FooterLink href={'#'}>About Us</FooterLink>
@@ -131,10 +133,12 @@ export default function Footer() {
           py={4}
           direction={{ base: 'column', md: 'row' }}
           spacing={4}
-          justify={{ md: 'space-between' }}
-          align={{ md: 'center' }}
+          justify={{ base: 'center', md: 'space-between' }}
+          align={{ base: 'center', md: 'center' }}
         >
-          <Text fontSize="sm">© 2024 PredictX. All rights reserved</Text>
+          <Text fontSize="sm" textAlign={{ base: 'center', md: 'left' }}>
+            © 2024 PredictX. All rights reserved
+          </Text>
           <Stack direction={'row'} spacing={6}>
             {socialIcons.map((icon, index) => (
               <MotionBox
