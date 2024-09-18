@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -39,10 +39,12 @@ import {
   Tooltip,
   Input,
   Link,
+  useBreakpointValue,
+  Divider,
 } from '@chakra-ui/react';
 import { FaChartLine, FaClock, FaUsers, FaThumbsUp, FaThumbsDown, FaReply, FaCoins, FaExchangeAlt, FaHistory } from 'react-icons/fa';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import NextLink from 'next/link';
 import { encodeQuery } from '../../../utils/queryUtils';
 import { useWeb3 } from '../../../contexts/Web3Context';
@@ -116,14 +118,15 @@ const MarketHeader = ({ market }: { market: Market }) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       bg={useColorModeValue('white', 'gray.800')}
-      p={8}
+      p={{ base: 4, md: 8 }}
       borderRadius="xl"
       boxShadow="xl"
       mb={8}
+      width="100%"
     >
       <VStack align="stretch" spacing={6}>
-        <Heading size="2xl" bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text">{market.question}</Heading>
-        <Text fontSize="lg" color={useColorModeValue('gray.600', 'gray.300')}>{market.description}</Text>
+        <Heading size={{ base: "xl", md: "2xl" }} bgGradient="linear(to-r, blue.400, purple.500)" bgClip="text">{market.question}</Heading>
+        <Text fontSize={{ base: "md", md: "lg" }} color={useColorModeValue('gray.600', 'gray.300')}>{market.description}</Text>
         <Flex justify="space-between" flexWrap="wrap" gap={4}>
           <HStack>
             <Icon as={FaClock} color="blue.500" />
@@ -189,11 +192,11 @@ const OrderBook = ({
         // Filter orders for the specific option
         const filteredBackOrders = allOrders
           .filter(order => order.side === "Back" && order.option_id === optionIndex)
-          .sort((a, b) => a.odds - b.odds); // Changed from b.odds - a.odds
+          .sort((a, b) => a.odds - b.odds);
 
         const filteredLayOrders = allOrders
           .filter(order => order.side === "Lay" && order.option_id === optionIndex)
-          .sort((a, b) => b.odds - a.odds); // Changed from a.odds - b.odds
+          .sort((a, b) => b.odds - a.odds);
 
         setBackOrders(filteredBackOrders);
         setLayOrders(filteredLayOrders);
@@ -218,26 +221,27 @@ const OrderBook = ({
   }
 
   return (
-    <Box mt={4} bg={bgColor} borderRadius="md" p={4} boxShadow="md">
+    <Box mt={4} bg={bgColor} borderRadius="md" p={4} boxShadow="md" width="100%">
       <Heading size="md" mb={4}>{selectedOption} - Order Book</Heading>
-      <Flex>
+      <Flex flexDirection={{ base: "column", md: "row" }} gap={4}>
         <VStack flex={1} spacing={2} align="stretch">
           <Flex fontWeight="bold" color={textColor}>
             <Box flex={1}>Amount</Box>
             <Box flex={1} textAlign="right">Back</Box>
           </Flex>
           {backOrders.slice(0, 3).map((order, index) => (
-            <Flex 
-              key={order.id} 
-              bg={getBackgroundColor(index, true)} 
-              p={2} 
-              borderRadius="md" 
-              cursor="pointer" 
-              onClick={() => onSelectOdds(order.odds / 100, 'back')}
-            >
-              <Box flex={1}>{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
-              <Box flex={1} textAlign="right" fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
-            </Flex>
+            <Tooltip key={order.id} label={`Click to place a back bet at ${(order.odds / 100).toFixed(2)}`} placement="left">
+              <Flex 
+                bg={getBackgroundColor(index, true)} 
+                p={2} 
+                borderRadius="md" 
+                cursor="pointer" 
+                onClick={() => onSelectOdds(order.odds / 100, 'back')}
+              >
+                <Box flex={1}>{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
+                <Box flex={1} textAlign="right" fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
+              </Flex>
+            </Tooltip>
           ))}
           {[...Array(3 - backOrders.length)].map((_, index) => (
             <Flex key={`empty-back-${index}`} bg="gray.100" p={2} borderRadius="md">
@@ -246,23 +250,24 @@ const OrderBook = ({
             </Flex>
           ))}
         </VStack>
-        <VStack flex={1} spacing={2} align="stretch" ml={4}>
+        <VStack flex={1} spacing={2} align="stretch">
           <Flex fontWeight="bold" color={textColor}>
             <Box flex={1}>Lay</Box>
             <Box flex={1} textAlign="right">Amount</Box>
           </Flex>
           {layOrders.slice(0, 3).map((order, index) => (
-            <Flex 
-              key={order.id} 
-              bg={getBackgroundColor(index, false)} 
-              p={2} 
-              borderRadius="md" 
-              cursor="pointer" 
-              onClick={() => onSelectOdds(order.odds / 100, 'lay')}
-            >
-              <Box flex={1} fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
-              <Box flex={1} textAlign="right">{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
-            </Flex>
+            <Tooltip key={order.id} label={`Click to place a lay bet at ${(order.odds / 100).toFixed(2)}`} placement="right">
+              <Flex 
+                bg={getBackgroundColor(index, false)} 
+                p={2} 
+                borderRadius="md" 
+                cursor="pointer" 
+                onClick={() => onSelectOdds(order.odds / 100, 'lay')}
+              >
+                <Box flex={1} fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
+                <Box flex={1} textAlign="right">{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
+              </Flex>
+            </Tooltip>
           ))}
           {[...Array(3 - layOrders.length)].map((_, index) => (
             <Flex key={`empty-lay-${index}`} bg="gray.100" p={2} borderRadius="md">
@@ -314,7 +319,7 @@ const OptionsList = ({ options, onSelectOption, market, onSelectOdds }: { option
   return (
     <Accordion allowMultiple onChange={(expandedIndexes: number[]) => {
       expandedIndexes.forEach(index => handleAccordionChange(index));
-    }}>
+    }} width="100%">
       {options.map((option, index) => (
         <AccordionItem key={index}>
           <h2>
@@ -434,6 +439,7 @@ const BettingInterface = ({ market, selectedOption, selectedOptionIndex, onBetPl
       boxShadow="xl"
       border="1px solid"
       borderColor={borderColor}
+      width="100%"
     >
       <Heading size="md" mb={4}>Betslip</Heading>
       <VStack spacing={4} align="stretch">
@@ -599,13 +605,14 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      bg="transparent"
+      bg={bgColor}
       borderRadius="xl"
       boxShadow="xl"
       p={6}
       border="1px solid"
       borderColor={borderColor}
       mt={8}
+      width="100%"
     >
       <VStack align="stretch" spacing={6}>
         <HStack justify="space-between">
@@ -670,57 +677,62 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
   );
 };
 
-const CommentSection = () => {
-  const [comments, setComments] = useState<Comment[]>([
-    { id: 1, author: 'User1', content: 'I think this market will close positively!', sentiment: 'positive', likes: 5, dislikes: 1 },
-    { id: 2, author: 'User2', content: 'Not sure about this one, could go either way.', sentiment: 'neutral', likes: 3, dislikes: 2 },
-  ]);
+const CommentSection = ({ marketId }: { marketId: number }) => {
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
-
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      const sentiment = newComment.toLowerCase().includes('positive') ? 'positive' : 
-                        newComment.toLowerCase().includes('negative') ? 'negative' : 'neutral';
-      const comment: Comment = {
-        id: comments.length + 1,
-        author: 'You',
-        content: newComment,
-        sentiment,
-        likes: 0,
-        dislikes: 0,
-      };
-      setComments([...comments, comment]);
-      setNewComment('');
-    }
-  };
+  const toast = useToast();
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const textColor = useColorModeValue('gray.700', 'gray.300');
+
+  const handleAddComment = async () => {
+    if (newComment.trim()) {
+      try {
+        // Implement the logic to add a new comment
+        // This should include a call to your smart contract or API
+        // For now, we'll just add it to the local state
+        const newCommentObj: Comment = {
+          id: comments.length + 1,
+          author: 'You',
+          content: newComment,
+          sentiment: 'neutral', // You might want to implement sentiment analysis here
+          likes: 0,
+          dislikes: 0,
+        };
+        setComments([newCommentObj, ...comments]);
+        setNewComment('');
+        toast({
+          title: 'Comment added',
+          status: 'success',
+          duration: 2000,
+          isClosable: true,
+        });
+      } catch (error) {
+        console.error('Error adding comment:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to add comment. Please try again.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    }
+  };
+
+  const handleLike = (id: number) => {
+    // Implement like functionality
+  };
+
+  const handleDislike = (id: number) => {
+    // Implement dislike functionality
+  };
 
   return (
-    <Box bg="transparent" p={6} borderRadius="xl" boxShadow="xl" mt={8}>
+    <Box bg={bgColor} p={6} borderRadius="xl" boxShadow="xl" mt={8} width="100%">
       <Heading size="md" mb={4}>Market Sentiment</Heading>
       <VStack spacing={4} align="stretch">
-        {comments.map((comment) => (
-          <Box key={comment.id} p={4} borderWidth={1} borderRadius="lg" borderColor={borderColor}>
-            <HStack spacing={3} mb={2}>
-              <Avatar size="sm" name={comment.author} />
-              <Text fontWeight="bold">{comment.author}</Text>
-              <Badge colorScheme={comment.sentiment === 'positive' ? 'green' : comment.sentiment === 'negative' ? 'red' : 'gray'}>
-                {comment.sentiment}
-              </Badge>
-            </HStack>
-            <Text mb={3}>{comment.content}</Text>
-            <HStack spacing={4}>
-              <Button leftIcon={<FaThumbsUp />} size="sm" variant="outline" borderRadius="full">
-                {comment.likes}
-              </Button>
-              <Button leftIcon={<FaThumbsDown />} size="sm" variant="outline" borderRadius="full">
-                {comment.dislikes}
-              </Button>
-            </HStack>
-          </Box>
-        ))}
         <HStack>
           <Input
             placeholder="Add your market sentiment..."
@@ -736,6 +748,36 @@ const CommentSection = () => {
             Post
           </Button>
         </HStack>
+        <AnimatePresence>
+          {comments.map((comment) => (
+            <MotionBox
+              key={comment.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Box p={4} borderWidth={1} borderRadius="lg" borderColor={borderColor}>
+                <HStack spacing={3} mb={2}>
+                  <Avatar size="sm" name={comment.author} />
+                  <Text fontWeight="bold">{comment.author}</Text>
+                  <Badge colorScheme={comment.sentiment === 'positive' ? 'green' : comment.sentiment === 'negative' ? 'red' : 'gray'}>
+                    {comment.sentiment}
+                  </Badge>
+                </HStack>
+                <Text mb={3} color={textColor}>{comment.content}</Text>
+                <HStack spacing={4}>
+                  <Button leftIcon={<FaThumbsUp />} size="sm" variant="outline" borderRadius="full" onClick={() => handleLike(comment.id)}>
+                    {comment.likes}
+                  </Button>
+                  <Button leftIcon={<FaThumbsDown />} size="sm" variant="outline" borderRadius="full" onClick={() => handleDislike(comment.id)}>
+                    {comment.dislikes}
+                  </Button>
+                </HStack>
+              </Box>
+            </MotionBox>
+          ))}
+        </AnimatePresence>
       </VStack>
     </Box>
   );
@@ -767,6 +809,7 @@ const MarketContent = ({ id }: { id: string }) => {
   const [selectedBetType, setSelectedBetType] = useState<'back' | 'lay'>('back');
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   useEffect(() => {
     const fetchMarket = async () => {
@@ -833,60 +876,99 @@ const MarketContent = ({ id }: { id: string }) => {
     return <Box>Market not found</Box>;
   }
 
-  return (
-    <Box bg="transparent" minHeight="100vh">
-      <Container maxW="container.xl" py={12}>
-        <Flex gap={8} flexDirection={{ base: 'column', lg: 'row' }}>
-          {/* Left Column - Main Content */}
-          <MotionBox
-            flex={3}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <MarketHeader market={market} />
-            <MotionBox
-              bg={bgColor}
-              p={6}
-              borderRadius="xl"
-              boxShadow="xl"
-              mb={8}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Heading size="lg" mb={4}>Market Options</Heading>
-              <OptionsList 
-                options={market.options} 
-                onSelectOption={(option, index) => {
-                  setSelectedOption(option);
-                  setSelectedOptionIndex(index);
-                }}
-                market={market}
-                onSelectOdds={handleSelectOdds}
-              />
-            </MotionBox>
-            <CommentSection />
-          </MotionBox>
+  const renderContent = () => (
+    <>
+      <MarketHeader market={market} />
+      <MotionBox
+        bg={bgColor}
+        p={6}
+        borderRadius="xl"
+        boxShadow="xl"
+        mb={8}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        width="100%"
+      >
+        <Heading size="lg" mb={4}>Market Options</Heading>
+        <OptionsList 
+          options={market.options} 
+          onSelectOption={(option, index) => {
+            setSelectedOption(option);
+            setSelectedOptionIndex(index);
+          }}
+          market={market}
+          onSelectOdds={handleSelectOdds}
+        />
+      </MotionBox>
+      <BettingInterface 
+        market={market} 
+        selectedOption={selectedOption} 
+        selectedOptionIndex={selectedOptionIndex}
+        onBetPlaced={handleBetPlaced}
+      />
+      <RecentOrders marketId={market.id} />
+      <CommentSection marketId={market.id} />
+    </>
+  );
 
-          {/* Right Column - Sidebar */}
-          <MotionBox
-            flex={1}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Box position="sticky" top={4}>
-              <BettingInterface 
-                market={market} 
-                selectedOption={selectedOption} 
-                selectedOptionIndex={selectedOptionIndex}
-                onBetPlaced={handleBetPlaced}
-              />
-              <RecentOrders marketId={market.id} />
-            </Box>
-          </MotionBox>
-        </Flex>
+  return (
+    <Box bg={bgColor} minHeight="100vh">
+      <Container maxW="container.xl" py={12}>
+        {isMobile ? (
+          <VStack spacing={8} width="100%">
+            {renderContent()}
+          </VStack>
+        ) : (
+          <Flex gap={8}>
+            <MotionBox
+              flex={3}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <MarketHeader market={market} />
+              <MotionBox
+                bg={bgColor}
+                p={6}
+                borderRadius="xl"
+                boxShadow="xl"
+                mb={8}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <Heading size="lg" mb={4}>Market Options</Heading>
+                <OptionsList 
+                  options={market.options} 
+                  onSelectOption={(option, index) => {
+                    setSelectedOption(option);
+                    setSelectedOptionIndex(index);
+                  }}
+                  market={market}
+                  onSelectOdds={handleSelectOdds}
+                />
+              </MotionBox>
+              <CommentSection marketId={market.id} />
+            </MotionBox>
+            <MotionBox
+              flex={1}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <Box position="sticky" top={4}>
+                <BettingInterface 
+                  market={market} 
+                  selectedOption={selectedOption} 
+                  selectedOptionIndex={selectedOptionIndex}
+                  onBetPlaced={handleBetPlaced}
+                />
+                <RecentOrders marketId={market.id} />
+              </Box>
+            </MotionBox>
+          </Flex>
+        )}
       </Container>
     </Box>
   );
