@@ -8,7 +8,7 @@ import {
   Text,
   Button,
   VStack,
-  HStack,
+  Stack,
   Container,
   Icon,
   useColorModeValue,
@@ -43,8 +43,8 @@ export default function Hero() {
 
   return (
     <Box bg={bgColor} position="relative" overflow="hidden">
-      <Container maxW="container.xl" py={20}>
-        <VStack spacing={10} align="center" position="relative">
+      <Container maxW="container.xl" py={{ base: 10, md: 20 }}>
+        <VStack spacing={{ base: 6, md: 10 }} align="center" position="relative">
           <MotionBox
             initial={{ opacity: 0, y: -50 }}
             animate={controls}
@@ -52,37 +52,44 @@ export default function Hero() {
           >
             <MotionHeading
               as="h1"
-              size="4xl"
+              fontSize={{ base: "4xl", md: "5xl", lg: "6xl" }}
               fontWeight="extrabold"
               textAlign="center"
               bgGradient={`linear(to-r, ${accentColor}, blue.400)`}
               bgClip="text"
-              mb={4}
+              mb={{ base: 2, md: 4 }}
+              lineHeight="shorter"
             >
-                Predict the Future, Profit Today
+              Predict the Future,<br />Profit Today
             </MotionHeading>
             <MotionText
-              fontSize="2xl"
+              fontSize={{ base: "lg", md: "xl", lg: "2xl" }}
               color={textColor}
               textAlign="center"
               maxW="3xl"
               mx="auto"
+              px={{ base: 4, md: 0 }}
             >
-                Welcome to PredictX, where your insights shape tomorrow&apos;s markets. 
-                Harness the power of collective intelligence and turn your predictions into profitable opportunities.
+              Welcome to PredictX, where your insights shape tomorrow&apos;s markets. 
+              Harness the power of collective intelligence and turn your predictions into profitable opportunities.
             </MotionText>
           </MotionBox>
 
-          <HStack spacing={6} justify="center">
+          <Stack
+            direction={{ base: "column", md: "row" }}
+            spacing={{ base: 4, md: 6 }}
+            justify="center"
+            width="100%"
+          >
             <MotionButton
               as={NextLink}
               href="/markets"
               colorScheme="purple"
               size="lg"
               rightIcon={<Icon as={FaRocket} />}
-              px={8}
-              py={6}
-              fontSize="lg"
+              px={{ base: 6, md: 8 }}
+              py={{ base: 6, md: 7 }}
+              fontSize={{ base: "md", md: "lg" }}
               fontWeight="bold"
               borderRadius="full"
               whileHover={{ scale: 1.05, boxShadow: "0 0 15px rgba(138, 43, 226, 0.5)" }}
@@ -90,6 +97,7 @@ export default function Hero() {
               initial={{ opacity: 0, y: 50 }}
               animate={controls}
               transition={{ duration: 0.5, delay: 0.4 }}
+              width={{ base: "full", md: "auto" }}
             >
               Explore Markets
             </MotionButton>
@@ -99,9 +107,9 @@ export default function Hero() {
               colorScheme="blue"
               size="lg"
               rightIcon={<Icon as={FaChartLine} />}
-              px={8}
-              py={6}
-              fontSize="lg"
+              px={{ base: 6, md: 8 }}
+              py={{ base: 6, md: 7 }}
+              fontSize={{ base: "md", md: "lg" }}
               fontWeight="bold"
               borderRadius="full"
               variant="outline"
@@ -110,37 +118,40 @@ export default function Hero() {
               initial={{ opacity: 0, y: 50 }}
               animate={controls}
               transition={{ duration: 0.5, delay: 0.5 }}
+              width={{ base: "full", md: "auto" }}
             >
               Create Market
             </MotionButton>
-          </HStack>
+          </Stack>
         </VStack>
       </Container>
 
       {/* Decorative elements */}
       <MotionBox
         position="absolute"
-        top="-5%"
-        left="-5%"
-        w="20%"
-        h="20%"
+        top={{ base: "-10%", md: "-5%" }}
+        left={{ base: "-20%", md: "-5%" }}
+        w={{ base: "50%", md: "20%" }}
+        h={{ base: "50%", md: "20%" }}
         borderRadius="full"
         bgGradient="linear(to-r, purple.200, blue.200)"
         filter="blur(60px)"
         opacity={0.4}
         animate={floatingAnimation}
+        display={{ base: "none", md: "block" }}
       />
       <MotionBox
         position="absolute"
-        bottom="-5%"
-        right="-5%"
-        w="25%"
-        h="25%"
+        bottom={{ base: "-10%", md: "-5%" }}
+        right={{ base: "-20%", md: "-5%" }}
+        w={{ base: "50%", md: "25%" }}
+        h={{ base: "50%", md: "25%" }}
         borderRadius="full"
         bgGradient="linear(to-l, purple.200, blue.200)"
         filter="blur(80px)"
         opacity={0.3}
         animate={floatingAnimation}
+        display={{ base: "none", md: "block" }}
       />
     </Box>
   );

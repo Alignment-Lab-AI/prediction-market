@@ -16,14 +16,14 @@ import {
   Badge,
   chakra,
   Spinner,
+  Container,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import { motion, useAnimation } from 'framer-motion';
 import { FaGlobe, FaClock, FaCoins, FaRocket } from 'react-icons/fa';
-import { useGlobalContext } from '../../../contexts/GlobalContext';
 import Link from 'next/link';
 import axios from 'axios';
 import { encodeQuery } from '../../../utils/queryUtils';
-
 
 const MotionBox = motion(Box);
 const MotionHeading = motion(Heading);
@@ -42,9 +42,9 @@ const GlassBox = chakra(Box, {
   },
 });
 
-const getTimeRemaining = (endTime) => {
+const getTimeRemaining = (endTime: number) => {
   const now = Math.floor(Date.now() / 1000);
-  const timeLeft = parseInt(endTime) - now;
+  const timeLeft = endTime - now;
   
   if (timeLeft <= 0) return 'Ended';
   
@@ -56,14 +56,23 @@ const getTimeRemaining = (endTime) => {
   return 'Ending soon';
 };
 
-const MarketCard = ({ market }) => {
+interface Market {
+  id: number;
+  question: string;
+  description: string;
+  options: string[];
+  end_time: number;
+  resolution_bond: string;
+}
+
+const MarketCard = ({ market }: { market: Market }) => {
   const controls = useAnimation();
   const [isHovered, setIsHovered] = React.useState(false);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.700', 'white');
   const mutedTextColor = useColorModeValue('gray.600', 'gray.400');
-  const cardBg = useColorModeValue('gray.50', 'white');
+  const cardBg = useColorModeValue('gray.50', 'gray.700');
 
   React.useEffect(() => {
     controls.start({ opacity: 1, y: 0 });
@@ -87,7 +96,7 @@ const MarketCard = ({ market }) => {
         onHoverEnd={() => setIsHovered(false)}
       >
         <GlassBox
-          h="310px"
+          h={{ base: "auto", md: "310px" }}
           display="flex"
           flexDirection="column"
           justifyContent="space-between"
@@ -99,7 +108,7 @@ const MarketCard = ({ market }) => {
             boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
           }}
         >
-          <VStack align="stretch" p={6} spacing={4}>
+          <VStack align="stretch" p={{ base: 4, md: 6 }} spacing={4}>
             <MotionHeading 
               size="md" 
               noOfLines={2}
@@ -138,7 +147,7 @@ const MarketCard = ({ market }) => {
             </HStack>
           </VStack>
           
-          <Flex direction="column" justify="flex-end" p={4} bg={useColorModeValue('gray.50', 'gray.700')} mt="auto">
+          <Flex direction="column" justify="flex-end" p={4} bg={useColorModeValue('gray.50', 'gray.600')} mt="auto">
             <HStack justify="space-between" mb={4}>
               <HStack>
                 <Icon as={FaCoins} color="yellow.500" />
@@ -180,13 +189,15 @@ const MarketCard = ({ market }) => {
 };
 
 export default function FeaturedMarkets() {
-  const [markets, setMarkets] = useState([]);
+  const [markets, setMarkets] = useState<Market[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const controls = useAnimation();
 
   const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const headingColor = useColorModeValue('gray.800', 'white'); // Changed this line
+  const headingColor = useColorModeValue('gray.800', 'white');
+
+  const columns = useBreakpointValue({ base: 1, md: 2, lg: 3 });
 
   useEffect(() => {
     const fetchMarkets = async () => {
@@ -222,54 +233,50 @@ export default function FeaturedMarkets() {
     controls.start({ opacity: 1, y: 0 });
   }, [controls]);
 
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="300px">
-        <Spinner size="xl" color="blue.500" />
-      </Box>
-    );
-  }
-
-  // Even if there's an error or no markets, we'll still render the component
-  // This ensures the homepage doesn't break
   return (
-    <Box py={20} bg="transparent">
-       <MotionHeading
-        as="h2"
-        size="2xl"
-        mb={10}
-        textAlign="center"
-        bgGradient="linear(to-r, blue.400, purple.500)"
-        bgClip="text"
-        fontWeight="extrabold"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+    <Box py={{ base: 10, md: 20 }} bg={bgColor}>
+      <Container maxW="container.xl">
+        <MotionHeading
+          as="h2"
+          fontSize={{ base: "3xl", md: "4xl", lg: "5xl" }}
+          mb={{ base: 6, md: 10 }}
+          textAlign="center"
+          bgGradient="linear(to-r, blue.400, purple.500)"
+          bgClip="text"
+          fontWeight="extrabold"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-        Featured Markets
+          Featured Markets
         </MotionHeading>
-      {error ? (
-        <Text textAlign="center" color="gray.600">
-          {error}
-        </Text>
-      ) : markets.length === 0 ? (
-        <Text textAlign="center" color="gray.600">
-          No markets available at the moment.
-        </Text>
-      ) : (
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
-          {markets.map((market, index) => (
-            <MotionBox
-              key={market.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <MarketCard market={market} />
-            </MotionBox>
-          ))}
-        </SimpleGrid>
-      )}
+        {isLoading ? (
+          <Flex justify="center" align="center" minHeight="300px">
+            <Spinner size="xl" color="blue.500" thickness="4px" />
+          </Flex>
+        ) : error ? (
+          <Text textAlign="center" color="gray.600" fontSize="lg">
+            {error}
+          </Text>
+        ) : markets.length === 0 ? (
+          <Text textAlign="center" color="gray.600" fontSize="lg">
+            No markets available at the moment.
+          </Text>
+        ) : (
+          <SimpleGrid columns={columns} spacing={{ base: 6, md: 10 }}>
+            {markets.map((market, index) => (
+              <MotionBox
+                key={market.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <MarketCard market={market} />
+              </MotionBox>
+            ))}
+          </SimpleGrid>
+        )}
+      </Container>
     </Box>
   );
 }

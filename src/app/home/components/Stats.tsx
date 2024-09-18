@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SimpleGrid, Box, Text, VStack, Icon, useColorModeValue, Spinner } from '@chakra-ui/react';
+import { SimpleGrid, Box, Text, VStack, Icon, useColorModeValue, Spinner, Heading, Container } from '@chakra-ui/react';
 import { motion, useAnimation } from 'framer-motion';
 import { FaChartLine, FaCoins, FaUsers, FaTrophy } from 'react-icons/fa';
 import axios from 'axios';
@@ -54,8 +54,8 @@ const StatCard = ({ icon, label, value, color }) => {
       transition={{ duration: 0.5 }}
     >
       <VStack
-        spacing={6}
-        p={8}
+        spacing={{ base: 4, md: 6 }}
+        p={{ base: 6, md: 8 }}
         bg={bgColor}
         borderRadius="2xl"
         boxShadow="xl"
@@ -78,10 +78,10 @@ const StatCard = ({ icon, label, value, color }) => {
           maskComposite: 'exclude',
         }}
       >
-        <Icon as={icon} fontSize="4xl" color={color} />
+        <Icon as={icon} fontSize={{ base: "3xl", md: "4xl" }} color={color} />
         <MotionText
           fontWeight="bold"
-          fontSize="4xl"
+          fontSize={{ base: "3xl", md: "4xl" }}
           bgGradient={`linear(to-r, ${color}, ${color})`}
           bgClip="text"
           initial={{ opacity: 0, y: 10 }}
@@ -93,7 +93,7 @@ const StatCard = ({ icon, label, value, color }) => {
         <MotionText
           color="gray.600"
           fontWeight="medium"
-          fontSize="lg"
+          fontSize={{ base: "md", md: "lg" }}
           textAlign="center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -160,42 +160,53 @@ export default function Stats() {
     fetchStats();
   }, []);
 
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="300px">
-        <Spinner size="xl" color="blue.500" />
-      </Box>
-    );
-  }
-
   return (
-    <Box py={20}>
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={10}>
-        <StatCard
-          icon={FaChartLine}
-          label="Total Markets"
-          value={stats.totalMarkets}
-          color="blue.500"
-        />
-        <StatCard
-          icon={FaCoins}
-          label={`Total Volume`}
-          value={(stats.totalVolume / 1000000).toFixed(2)}
-          color="yellow.500"
-        />
-        <StatCard
-          icon={FaUsers}
-          label="Active Users"
-          value={stats.activeUsers}
-          color="green.500"
-        />
-        <StatCard
-          icon={FaTrophy}
-          label="Total Rewards"
-          value={(stats.totalRewards / 1000000).toFixed(2)}
-          color="purple.500"
-        />
-      </SimpleGrid>
+    <Box py={{ base: 10, md: 20 }}>
+      <Container maxW="container.xl">
+        <Heading 
+          as="h2" 
+          fontSize={{ base: "3xl", md: "4xl" }}
+          textAlign="center"
+          mb={{ base: 8, md: 12 }}
+          bgGradient="linear(to-r, blue.400, purple.500)"
+          bgClip="text"
+          fontWeight="extrabold"
+        >
+          Platform Statistics
+        </Heading>
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+            <Spinner size="xl" color="blue.500" thickness="4px" />
+          </Box>
+        ) : (
+          <SimpleGrid columns={{ base: 2, lg: 4 }} spacing={{ base: 6, md: 10 }}>
+            <StatCard
+              icon={FaChartLine}
+              label="Total Markets"
+              value={stats.totalMarkets}
+              color="blue.500"
+            />
+            <StatCard
+              icon={FaCoins}
+              label={`Total Volume`}
+              value={(stats.totalVolume / 1000000).toFixed(2)}
+              color="yellow.500"
+            />
+            <StatCard
+              icon={FaUsers}
+              label="Active Users"
+              value={stats.activeUsers}
+              color="green.500"
+            />
+            <StatCard
+              icon={FaTrophy}
+              label="Total Rewards"
+              value={(stats.totalRewards / 1000000).toFixed(2)}
+              color="purple.500"
+            />
+          </SimpleGrid>
+        )}
+      </Container>
     </Box>
   );
 }
