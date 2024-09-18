@@ -436,7 +436,7 @@ const UserProfilePage = () => {
               </Box>
             </MotionBox>
 
-            <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={6}>
+            <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={6}>
               {[
                 { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} CMDX`, color: 'blue.400' },
                 { label: 'Total Bets', icon: FaChartBar, value: userProfile.totalBets, color: 'purple.500' },
