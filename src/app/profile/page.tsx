@@ -340,9 +340,9 @@ const UserProfilePage = () => {
 
   return (
     <ChakraProvider theme={theme}>
-      <Box bg={bgColor} minHeight="100vh" py={12}>
+      <Box bg={bgColor} minHeight="100vh" py={6} px={4}>
         <Container maxW="container.xl">
-          <VStack spacing={10} align="stretch">
+          <VStack spacing={8} align="stretch">
             <MotionBox
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -357,7 +357,7 @@ const UserProfilePage = () => {
               >
                 <Box
                   bgGradient={gradientColor}
-                  h="200px"
+                  h={{ base: "150px", md: "200px" }}
                   position="relative"
                   _before={{
                     content: '""',
@@ -368,22 +368,22 @@ const UserProfilePage = () => {
                     left: 0,
                     backgroundImage: 'url("https://www.transparenttextures.com/patterns/cubes.png")',
                     backgroundRepeat: 'repeat',
-                    backgroundSize: '50px 50px', // Adjust this value to change the pattern size
-                    opacity: 5.1,
+                    backgroundSize: '50px 50px',
+                    opacity: 0.1,
                     mixBlendMode: 'overlay',
                   }}
                 >
                   <Box
                     position="absolute"
-                    bottom="-50px"
-                    left="50px"
+                    bottom={{ base: "-40px", md: "-50px" }}
+                    left={{ base: "20px", md: "50px" }}
                     borderRadius="full"
                     border="4px solid"
                     borderColor={cardBgColor}
                     boxShadow="lg"
                   >
                     <Avatar
-                      size="2xl"
+                      size={{ base: "xl", md: "2xl" }}
                       name={userProfile.name}
                       src={userProfile.avatar}
                       bg={accentColor}
@@ -392,18 +392,18 @@ const UserProfilePage = () => {
                     </Avatar>
                   </Box>
                 </Box>
-                <Box p={8} pt={16}>
-                  <Flex justifyContent="space-between" alignItems="center">
-                    <VStack align="start" spacing={2}>
-                      <Heading size="2xl" bgGradient={gradientColor} bgClip="text">
+                <Box p={{ base: 4, md: 8 }} pt={{ base: 12, md: 16 }}>
+                  <Flex flexDirection={{ base: "column", md: "row" }} justifyContent="space-between" alignItems={{ base: "flex-start", md: "center" }}>
+                    <VStack align="start" spacing={2} mb={{ base: 4, md: 0 }}>
+                      <Heading size={{ base: "xl", md: "2xl" }} bgGradient={gradientColor} bgClip="text">
                         {userProfile.name}
                       </Heading>
-                      <Text color="gray.500" fontSize="md">Prediction Market Enthusiast</Text>
-                      <Text color="gray.500" fontSize="sm" fontStyle="italic" isTruncated maxW="300px">
+                      <Text color="gray.500" fontSize={{ base: "sm", md: "md" }}>Prediction Market Enthusiast</Text>
+                      <Text color="gray.500" fontSize={{ base: "xs", md: "sm" }} fontStyle="italic" isTruncated maxW={{ base: "100%", md: "300px" }}>
                         {userProfile.walletAddress}
                       </Text>
                     </VStack>
-                    <VStack align="end" spacing={4}>
+                    <VStack align={{ base: "stretch", md: "end" }} spacing={4} width={{ base: "100%", md: "auto" }}>
                       <Button 
                         leftIcon={<Icon as={FaEdit} />} 
                         onClick={onOpen} 
@@ -412,8 +412,9 @@ const UserProfilePage = () => {
                         _hover={{
                           bgGradient: "linear(to-r, blue.500, purple.600)",
                         }}
-                        size="lg" 
+                        size={{ base: "md", md: "lg" }}
                         borderRadius="full"
+                        width={{ base: "100%", md: "auto" }}
                       >
                         Edit Profile
                       </Button>
@@ -422,8 +423,9 @@ const UserProfilePage = () => {
                           as="a" 
                           leftIcon={<Icon as={FaUserShield} />} 
                           colorScheme="purple" 
-                          size="lg" 
+                          size={{ base: "md", md: "lg" }}
                           borderRadius="full"
+                          width={{ base: "100%", md: "auto" }}
                         >
                           Admin Dashboard
                         </Button>
@@ -434,8 +436,8 @@ const UserProfilePage = () => {
               </Box>
             </MotionBox>
 
-            <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={8}>
-            {[
+            <Grid templateColumns={{ base: 'repeat(1, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={6}>
+              {[
                 { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} CMDX`, color: 'blue.400' },
                 { label: 'Total Bets', icon: FaChartBar, value: userProfile.totalBets, color: 'purple.500' },
                 { label: 'Win Rate', icon: FaTrophy, value: `${userProfile.winRate.toFixed(2)}%`, color: 'yellow.400', helpText: `${userProfile.wonBets} won / ${userProfile.lostBets} lost` },
@@ -449,15 +451,15 @@ const UserProfilePage = () => {
                   whileHover={{ y: -5, boxShadow: "2xl" }}
                 >
                   <Stat 
-                    px={6} 
-                    py={8}
+                    px={4} 
+                    py={6}
                     bg={cardBgColor}
                     backdropFilter="blur(10px)"
                     borderRadius="2xl" 
                     boxShadow="xl"
                     border="1px solid"
                     borderColor={borderColor}
-                    height="200px"
+                    height={{ base: "auto", md: "200px" }}
                     position="relative"
                     overflow="hidden"
                   >
@@ -471,17 +473,17 @@ const UserProfilePage = () => {
                       borderRadius="full"
                       filter="blur(20px)"
                     />
-                    <StatLabel fontWeight="medium" color={textColor} fontSize="lg">
+                    <StatLabel fontWeight="medium" color={textColor} fontSize={{ base: "sm", md: "lg" }}>
                       <HStack spacing={2}>
-                        <Icon as={stat.icon} color={stat.color} boxSize={6} />
+                        <Icon as={stat.icon} color={stat.color} boxSize={{ base: 4, md: 6 }} />
                         <Text>{stat.label}</Text>
                       </HStack>
                     </StatLabel>
-                    <StatNumber fontSize="3xl" fontWeight="bold" color={stat.color} mt={2}>
+                    <StatNumber fontSize={{ base: "xl", md: "3xl" }} fontWeight="bold" color={stat.color} mt={2}>
                       {stat.value}
                     </StatNumber>
                     {stat.helpText && (
-                      <StatHelpText mt={2}>
+                      <StatHelpText mt={2} fontSize={{ base: "xs", md: "sm" }}>
                         <StatArrow type={userProfile.winRate > 50 ? 'increase' : 'decrease'} />
                         {stat.helpText}
                       </StatHelpText>
@@ -512,9 +514,11 @@ const UserProfilePage = () => {
                   boxShadow="md"
                   border="1px solid"
                   borderColor={borderColor}
+                  overflowX="auto"
+                  whiteSpace="nowrap"
                 >
-                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Betting History</Tab>
-                  <Tab fontSize="lg" fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Notification Settings</Tab>
+                  <Tab fontSize={{ base: "sm", md: "lg" }} fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Betting History</Tab>
+                  <Tab fontSize={{ base: "sm", md: "lg" }} fontWeight="medium" _selected={{ color: 'white', bg: accentColor }}>Notification Settings</Tab>
                 </TabList>
 
                 <TabPanels mt={6}>
@@ -522,132 +526,139 @@ const UserProfilePage = () => {
                     <Box 
                       bg={cardBgColor}
                       backdropFilter="blur(10px)"
-                      p={6} 
+                      p={4} 
                       borderRadius="2xl" 
                       boxShadow="xl"
                       border="1px solid"
                       borderColor={borderColor}
+                      overflowX="auto"
                     >
                       <Heading size="lg" bgGradient={gradientColor} bgClip="text" mb={6}>Betting History</Heading>
                       <Tabs>
-                        <TabList>
+                        <TabList overflowX="auto" whiteSpace="nowrap">
                           <Tab>Active Orders</Tab>
                           <Tab>Matched Bets</Tab>
                           <Tab>Past Orders</Tab>
                         </TabList>
                         <TabPanels>
                           <TabPanel>
-                            <Table variant="simple">
-                              <Thead>
-                                <Tr>
-                                  <Th>Market ID</Th>
-                                  <Th>Side</Th>
-                                  <Th>Amount</Th>
-                                  <Th>Odds</Th>
-                                  <Th>Filled Amount</Th>
-                                  <Th>Status</Th>
-                                  <Th>Timestamp</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody>
-                                {orders.filter(order => order.status === 'Open' || order.status === 'PartiallyFilled').map((order) => (
-                                  <Tr key={order.id}>
-                                    <Td>{order.market_id}</Td>
-                                    <Td>
-                                      <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
-                                        {order.side}
-                                      </Badge>
-                                    </Td>
-                                    <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
-                                    <Td>{(order.odds / 100).toFixed(2)}</Td>
-                                    <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
-                                    <Td>
-                                      <Badge colorScheme={order.status === 'Open' ? 'green' : 'yellow'}>
-                                        {order.status}
-                                      </Badge>
-                                    </Td>
-                                    <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
+                            <Box overflowX="auto">
+                              <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                                <Thead>
+                                  <Tr>
+                                    <Th>Market ID</Th>
+                                    <Th>Side</Th>
+                                    <Th>Amount</Th>
+                                    <Th>Odds</Th>
+                                    <Th>Filled Amount</Th>
+                                    <Th>Status</Th>
+                                    <Th>Timestamp</Th>
                                   </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
+                                </Thead>
+                                <Tbody>
+                                  {orders.filter(order => order.status === 'Open' || order.status === 'PartiallyFilled').map((order) => (
+                                    <Tr key={order.id}>
+                                      <Td>{order.market_id}</Td>
+                                      <Td>
+                                        <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                                          {order.side}
+                                        </Badge>
+                                      </Td>
+                                      <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(order.odds / 100).toFixed(2)}</Td>
+                                      <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>
+                                        <Badge colorScheme={order.status === 'Open' ? 'green' : 'yellow'}>
+                                          {order.status}
+                                        </Badge>
+                                      </Td>
+                                      <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
+                                    </Tr>
+                                  ))}
+                                </Tbody>
+                              </Table>
+                            </Box>
                           </TabPanel>
                           <TabPanel>
-                            <Table variant="simple">
-                              <Thead>
-                                <Tr>
-                                  <Th>Market ID</Th>
-                                  <Th>Amount</Th>
-                                  <Th>Odds</Th>
-                                  <Th>Role</Th>
-                                  <Th>Status</Th>
-                                  <Th>Timestamp</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody>
-                                {matchedBets.map((bet) => (
-                                  <Tr key={bet.id}>
-                                    <Td>{bet.market_id}</Td>
-                                    <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} CMDX</Td>
-                                    <Td>{(bet.odds / 100).toFixed(2)}</Td>
-                                    <Td>
-                                      <Badge colorScheme={bet.back_user === walletAddress ? 'green' : 'red'}>
-                                        {bet.back_user === walletAddress ? 'Back' : 'Lay'}
-                                      </Badge>
-                                    </Td>
-                                    <Td>
-                                      <Badge colorScheme={bet.redeemed ? 'green' : 'yellow'}>
-                                        {bet.redeemed ? 'Redeemed' : 'Active'}
-                                      </Badge>
-                                    </Td>
-                                    <Td>{new Date(bet.timestamp * 1000).toLocaleString()}</Td>
+                            <Box overflowX="auto">
+                              <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                                <Thead>
+                                  <Tr>
+                                    <Th>Market ID</Th>
+                                    <Th>Amount</Th>
+                                    <Th>Odds</Th>
+                                    <Th>Role</Th>
+                                    <Th>Status</Th>
+                                    <Th>Timestamp</Th>
                                   </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
+                                </Thead>
+                                <Tbody>
+                                  {matchedBets.map((bet) => (
+                                    <Tr key={bet.id}>
+                                      <Td>{bet.market_id}</Td>
+                                      <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(bet.odds / 100).toFixed(2)}</Td>
+                                      <Td>
+                                        <Badge colorScheme={bet.back_user === walletAddress ? 'green' : 'red'}>
+                                          {bet.back_user === walletAddress ? 'Back' : 'Lay'}
+                                        </Badge>
+                                      </Td>
+                                      <Td>
+                                        <Badge colorScheme={bet.redeemed ? 'green' : 'yellow'}>
+                                          {bet.redeemed ? 'Redeemed' : 'Active'}
+                                        </Badge>
+                                      </Td>
+                                      <Td>{new Date(bet.timestamp * 1000).toLocaleString()}</Td>
+                                    </Tr>
+                                  ))}
+                                </Tbody>
+                              </Table>
+                            </Box>
                           </TabPanel>
                           <TabPanel>
-                            <Table variant="simple">
-                              <Thead>
-                                <Tr>
-                                  <Th>Market ID</Th>
-                                  <Th>Side</Th>
-                                  <Th>Amount</Th>
-                                  <Th>Odds</Th>
-                                  <Th>Filled Amount</Th>
-                                  <Th>Status</Th>
-                                  <Th>Timestamp</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody>
-                                {orders.filter(order => order.status !== 'Open' && order.status !== 'PartiallyFilled').map((order) => (
-                                  <Tr key={order.id}>
-                                    <Td>{order.market_id}</Td>
-                                    <Td>
-                                      <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
-                                        {order.side}
-                                      </Badge>
-                                    </Td>
-                                    <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
-                                    <Td>{(order.odds / 100).toFixed(2)}</Td>
-                                    <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
-                                    <Td>
-                                      <Badge colorScheme={order.status === 'Filled' ? 'green' : 'red'}>
-                                        {order.status}
-                                      </Badge>
-                                    </Td>
-                                    <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
+                            <Box overflowX="auto">
+                              <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                                <Thead>
+                                  <Tr>
+                                    <Th>Market ID</Th>
+                                    <Th>Side</Th>
+                                    <Th>Amount</Th>
+                                    <Th>Odds</Th>
+                                    <Th>Filled Amount</Th>
+                                    <Th>Status</Th>
+                                    <Th>Timestamp</Th>
                                   </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
+                                </Thead>
+                                <Tbody>
+                                  {orders.filter(order => order.status !== 'Open' && order.status !== 'PartiallyFilled').map((order) => (
+                                    <Tr key={order.id}>
+                                      <Td>{order.market_id}</Td>
+                                      <Td>
+                                        <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                                          {order.side}
+                                        </Badge>
+                                      </Td>
+                                      <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(order.odds / 100).toFixed(2)}</Td>
+                                      <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>
+                                        <Badge colorScheme={order.status === 'Filled' ? 'green' : 'red'}>
+                                          {order.status}
+                                        </Badge>
+                                      </Td>
+                                      <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
+                                    </Tr>
+                                  ))}
+                                </Tbody>
+                              </Table>
+                            </Box>
                           </TabPanel>
                         </TabPanels>
                       </Tabs>
-                      <Flex justifyContent="space-between" alignItems="center" mt={4}>
+                      <Flex justifyContent="space-between" alignItems="center" mt={4} flexDirection={{ base: "column", md: "row" }} gap={4}>
                         <HStack>
-                          <Text>Items per page:</Text>
-                          <Select value={itemsPerPage} onChange={handleItemsPerPageChange} w="70px">
+                          <Text fontSize={{ base: "sm", md: "md" }}>Items per page:</Text>
+                          <Select value={itemsPerPage} onChange={handleItemsPerPageChange} w="70px" size={{ base: "sm", md: "md" }}>
                             <option value="10">10</option>
                             <option value="20">20</option>
                             <option value="50">50</option>
@@ -658,14 +669,16 @@ const UserProfilePage = () => {
                             onClick={() => handlePageChange(currentPage - 1)}
                             isDisabled={currentPage === 1}
                             leftIcon={<FaChevronLeft />}
+                            size={{ base: "sm", md: "md" }}
                           >
                             Previous
                           </Button>
-                          <Text>{`Page ${currentPage}`}</Text>
+                          <Text fontSize={{ base: "sm", md: "md" }}>{`Page ${currentPage}`}</Text>
                           <Button
                             onClick={() => handlePageChange(currentPage + 1)}
                             isDisabled={orders.length + matchedBets.length < itemsPerPage}
                             rightIcon={<FaChevronRight />}
+                            size={{ base: "sm", md: "md" }}
                           >
                             Next
                           </Button>
@@ -689,7 +702,7 @@ const UserProfilePage = () => {
                           <Flex key={type} justifyContent="space-between" alignItems="center">
                             <HStack spacing={4}>
                               <Icon as={FaBell} color={accentColor} boxSize={6} />
-                              <Text fontSize="lg" fontWeight="medium">{type.charAt(0).toUpperCase() + type.slice(1)} Notifications</Text>
+                              <Text fontSize={{ base: "md", md: "lg" }} fontWeight="medium">{type.charAt(0).toUpperCase() + type.slice(1)} Notifications</Text>
                             </HStack>
                             <Switch
                               size="lg"
@@ -716,19 +729,19 @@ const UserProfilePage = () => {
                 <VStack align="start" spacing={4}>
                   <HStack>
                     <Icon as={FaInfoCircle} color="blue.500" />
-                    <Text><strong>Wallet Balance:</strong> This is your current balance in CMDX tokens.</Text>
+                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Wallet Balance:</strong> This is your current balance in CMDX tokens.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="purple.500" />
-                    <Text><strong>Total Bets:</strong> The total number of bets you have placed, including active and past bets.</Text>
+                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Total Bets:</strong> The total number of bets you have placed, including active and past bets.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="yellow.500" />
-                    <Text><strong>Win Rate:</strong> Your success rate in predictions, calculated from your won and lost bets.</Text>
+                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Win Rate:</strong> Your success rate in predictions, calculated from your won and lost bets.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="green.500" />
-                    <Text><strong>Profit/Loss:</strong> Your overall performance in CMDX tokens, considering all your bets.</Text>
+                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Profit/Loss:</strong> Your overall performance in CMDX tokens, considering all your bets.</Text>
                   </HStack>
                 </VStack>
               </Box>
