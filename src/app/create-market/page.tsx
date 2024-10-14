@@ -83,7 +83,6 @@ const categories = ['Sports', 'Politics', 'Entertainment', 'Technology', 'Financ
 const GlassBox = ({ children, ...props }) => {
   const glassColor = useColorModeValue('rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.1)');
   const borderColor = useColorModeValue('rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0.1)');
-  
   return (
     <Box
       bg={glassColor}
@@ -188,16 +187,16 @@ const CreateMarketPage = () => {
       });
       return;
     }
-  
+
     setIsSubmitting(true);
     try {
       const startTimestamp = Math.floor(new Date(`${data.startDate.toDateString()} ${data.startTime}`).getTime() / 1000).toString();
       const endTimestamp = Math.floor(new Date(`${data.endDate.toDateString()} ${data.endTime}`).getTime() / 1000).toString();
-  
+
       const resolutionBondUcmdx = BigInt(Math.floor(data.resolutionBond * 1000000));
       const resolutionRewardUcmdx = BigInt(Math.floor(data.resolutionReward * 1000000));
       const totalFundsUcmdx = resolutionRewardUcmdx;
-  
+
       const createMarketMsg = {
         create_market: {
           category: data.category,
@@ -210,29 +209,29 @@ const CreateMarketPage = () => {
           resolution_reward: resolutionRewardUcmdx.toString(),
         }
       };
-  
+
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
       if (!contractAddress) {
         throw new Error("Contract address not defined in environment variables");
       }
-  
+
       const funds = [{
-        denom: "ucmdx",
+        denom: "uosmo",
         amount: totalFundsUcmdx.toString()
       }];
-  
+
       console.log("Sending transaction with message:", JSON.stringify(createMarketMsg, null, 2));
       console.log("Funds:", JSON.stringify(funds, null, 2));
-  
+
       const result = await broadcastTransaction(
         process.env.NEXT_PUBLIC_CHAIN_ID!,
         contractAddress,
         createMarketMsg,
         funds
       );
-  
+
       console.log("Transaction result:", result);
-  
+
       if (result && result.transactionHash) {
         confetti({
           particleCount: 100,
@@ -285,7 +284,6 @@ const CreateMarketPage = () => {
               </Select>
               <FormErrorMessage fontSize="xs">{errors.category?.message}</FormErrorMessage>
             </FormControl>
-    
             <FormControl isInvalid={!!errors.question}>
               <FormLabel fontSize="sm" fontWeight="semibold">Question</FormLabel>
               <Input
@@ -301,11 +299,11 @@ const CreateMarketPage = () => {
               <FormErrorMessage fontSize="xs">{errors.question?.message}</FormErrorMessage>
               <FormHelperText fontSize="xs">Enter a clear, concise question for your market.</FormHelperText>
             </FormControl>
-    
+
             <FormControl isInvalid={!!errors.description}>
               <FormLabel fontSize="sm" fontWeight="semibold">Description</FormLabel>
-              <Textarea 
-                {...register("description", { required: "Description is required" })} 
+              <Textarea
+                {...register("description", { required: "Description is required" })}
                 placeholder="Provide additional context or details about your market question."
                 minHeight="100px"
                 bg={inputBgColor}
@@ -410,7 +408,6 @@ const CreateMarketPage = () => {
                 <FormErrorMessage fontSize="xs">{errors.startDate?.message || errors.startTime?.message}</FormErrorMessage>
                 <FormHelperText fontSize="xs">Choose when your market will open for predictions.</FormHelperText>
               </FormControl>
-  
               <FormControl isInvalid={!!errors.endDate || !!errors.endTime}>
                 <FormLabel fontSize="sm" fontWeight="semibold">End Time</FormLabel>
                 <HStack>
@@ -455,7 +452,7 @@ const CreateMarketPage = () => {
           return (
             <VStack spacing={4} align="stretch">
               <FormControl isInvalid={!!errors.resolutionBond}>
-                <FormLabel fontSize="sm" fontWeight="semibold">Resolution Bond (CMDX)</FormLabel>
+                <FormLabel fontSize="sm" fontWeight="semibold">Resolution Bond (OSMO)</FormLabel>
                 <NumberInput min={0} precision={2} size="sm">
                   <NumberInputField {...register("resolutionBond", { required: "Resolution bond is required" })} borderRadius="md" />
                   <NumberInputStepper>
@@ -464,11 +461,11 @@ const CreateMarketPage = () => {
                   </NumberInputStepper>
                 </NumberInput>
                 <FormErrorMessage fontSize="xs">{errors.resolutionBond?.message}</FormErrorMessage>
-                <FormHelperText fontSize="xs">Set the amount of CMDX required as a resolution bond for this market.</FormHelperText>
+                <FormHelperText fontSize="xs">Set the amount of OSMO required as a resolution bond for this market.</FormHelperText>
               </FormControl>
-  
+
               <FormControl isInvalid={!!errors.resolutionReward}>
-                <FormLabel fontSize="sm" fontWeight="semibold">Resolution Reward (CMDX)</FormLabel>
+                <FormLabel fontSize="sm" fontWeight="semibold">Resolution Reward (OSMO)</FormLabel>
                 <NumberInput min={0} precision={2} size="sm">
                   <NumberInputField {...register("resolutionReward", { required: "Resolution reward is required" })} borderRadius="md" />
                   <NumberInputStepper>
@@ -499,20 +496,20 @@ const CreateMarketPage = () => {
               <Text fontSize="sm"><strong>Start Time:</strong> {`${watchedFields.startDate?.toLocaleDateString()} ${watchedFields.startTime}`}</Text>
               <Text fontSize="sm"><strong>End Time:</strong> {`${watchedFields.endDate?.toLocaleDateString()} ${watchedFields.endTime}`}</Text>
               <Divider my={2} />
-              <Text fontSize="sm"><strong>Resolution Bond:</strong> {watchedFields.resolutionBond} CMDX</Text>
-              <Text fontSize="sm"><strong>Resolution Reward:</strong> {watchedFields.resolutionReward} CMDX</Text>
+              <Text fontSize="sm"><strong>Resolution Bond:</strong> {watchedFields.resolutionBond} OSMO</Text>
+              <Text fontSize="sm"><strong>Resolution Reward:</strong> {watchedFields.resolutionReward} OSMO</Text>
             </VStack>
           );
         default:
           return null;
       }
     };
-  
+
     const buttonBgColor = useColorModeValue("blue.500", "blue.200");
     const buttonHoverBgColor = useColorModeValue("blue.600", "blue.300");
     const inputBgColor = useColorModeValue("white", "gray.700");
     const inputBorderColor = useColorModeValue("gray.200", "gray.600");
-  
+
     return (
       <Box
         bg="transparent"
@@ -521,18 +518,18 @@ const CreateMarketPage = () => {
       >
         <Container maxW="container.md">
           <VStack spacing={8} align="stretch">
-            <Heading 
-              textAlign="center" 
-              fontSize={{ base: "3xl", md: "4xl" }} 
-              fontWeight="extrabold" 
-              bgGradient={gradientColor} 
-              bgClip="text" 
+            <Heading
+              textAlign="center"
+              fontSize={{ base: "3xl", md: "4xl" }}
+              fontWeight="extrabold"
+              bgGradient={gradientColor}
+              bgClip="text"
               letterSpacing="tight"
               mb={4}
             >
               Create New Market
             </Heading>
-            
+
             <GlassBox p={{ base: 4, md: 6 }}>
               <Box position="relative">
                 <HStack justify="center" spacing={{ base: 2, md: 4 }} mb={6} overflowX="auto" py={2}>
@@ -558,7 +555,7 @@ const CreateMarketPage = () => {
                     </Tooltip>
                   ))}
                 </HStack>
-  
+
                 <Box position="relative" h="2px" mb={6}>
                   <Box
                     position="absolute"
@@ -579,8 +576,7 @@ const CreateMarketPage = () => {
                     borderRadius="full"
                     transition="width 0.3s ease-in-out"
                   />
-                </Box>
-  
+                </Box>                
                 <form onSubmit={handleSubmit(onSubmit)}>
                   <Box
                     minHeight="300px"
@@ -589,7 +585,6 @@ const CreateMarketPage = () => {
                     justifyContent="space-between"
                   >
                     {renderStepContent(currentStep)}
-                    
                     <HStack justify="space-between" mt={6}>
                       <Button
                         onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
@@ -599,8 +594,8 @@ const CreateMarketPage = () => {
                         size="sm"
                         fontWeight="bold"
                         borderRadius="full"
-                        _hover={{ 
-                          transform: 'translateX(-2px)', 
+                        _hover={{
+                          transform: 'translateX(-2px)',
                           boxShadow: 'sm',
                           bg: useColorModeValue('gray.100', 'gray.700')
                         }}
@@ -617,10 +612,10 @@ const CreateMarketPage = () => {
                           size="sm"
                           fontWeight="bold"
                           borderRadius="full"
-                          _hover={{ 
+                          _hover={{
                             bgGradient: gradientColor,
-                            transform: 'translateX(2px)', 
-                            boxShadow: 'sm' 
+                            transform: 'translateX(2px)',
+                            boxShadow: 'sm'
                           }}
                           transition="all 0.3s"
                         >
@@ -636,10 +631,10 @@ const CreateMarketPage = () => {
                           size="sm"
                           fontWeight="bold"
                           borderRadius="full"
-                          _hover={{ 
+                          _hover={{
                             bgGradient: gradientColor,
-                            transform: 'translateY(-2px)', 
-                            boxShadow: 'md' 
+                            transform: 'translateY(-2px)',
+                            boxShadow: 'md'
                           }}
                           transition="all 0.3s"
                         >
@@ -652,8 +647,7 @@ const CreateMarketPage = () => {
               </Box>
             </GlassBox>
           </VStack>
-        </Container>
-  
+        </Container>        
         <Modal isOpen={isOpen} onClose={onClose}>
           <ModalOverlay backdropFilter="blur(5px)" />
           <ModalContent borderRadius="xl" bg={cardBgColor}>
@@ -672,7 +666,7 @@ const CreateMarketPage = () => {
                 <Text fontSize="sm">
                   Your address is not whitelisted to create markets. Please contact the team to get your address whitelisted.
                 </Text>
-                <Button 
+                <Button
                   bgGradient={gradientColor}
                   color="white"
                   onClick={() => window.open('mailto:support@predictx.com')}
@@ -680,10 +674,10 @@ const CreateMarketPage = () => {
                   size="sm"
                   fontWeight="bold"
                   borderRadius="full"
-                  _hover={{ 
+                  _hover={{
                     bgGradient: useColorModeValue("linear(to-r, blue.500, purple.600)", "linear(to-r, blue.300, purple.400)"),
-                    transform: 'translateY(-2px)', 
-                    boxShadow: 'sm' 
+                    transform: 'translateY(-2px)',
+                    boxShadow: 'sm'
                   }}
                   transition="all 0.3s"
                 >
@@ -696,5 +690,4 @@ const CreateMarketPage = () => {
       </Box>
     );
   };
-  
-  export default CreateMarketPage;
+export default CreateMarketPage;

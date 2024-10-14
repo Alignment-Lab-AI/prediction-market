@@ -45,12 +45,9 @@ const GlassBox = chakra(Box, {
 const getTimeRemaining = (endTime: number) => {
   const now = Math.floor(Date.now() / 1000);
   const timeLeft = endTime - now;
-  
   if (timeLeft <= 0) return 'Ended';
-  
   const days = Math.floor(timeLeft / 86400);
   const hours = Math.floor((timeLeft % 86400) / 3600);
-  
   if (days > 0) return `${days} days remaining`;
   if (hours > 0) return `${hours} hours remaining`;
   return 'Ending soon';
@@ -84,8 +81,8 @@ const MarketCard = ({ market }: { market: Market }) => {
     <Link href={`/market/${market.id}`} passHref>
       <MotionBox
         as="a"
-        whileHover={{ 
-          y: -10, 
+        whileHover={{
+          y: -10,
           boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
           transition: { duration: 0.3, ease: 'easeOut' }
         }}
@@ -109,8 +106,8 @@ const MarketCard = ({ market }: { market: Market }) => {
           }}
         >
           <VStack align="stretch" p={{ base: 4, md: 6 }} spacing={4}>
-            <MotionHeading 
-              size="md" 
+            <MotionHeading
+              size="md"
               noOfLines={2}
               bgGradient="linear(to-r, blue.400, purple.500)"
               bgClip="text"
@@ -121,8 +118,8 @@ const MarketCard = ({ market }: { market: Market }) => {
             >
               {market.question}
             </MotionHeading>
-            <MotionText 
-              fontSize="sm" 
+            <MotionText
+              fontSize="sm"
               color={mutedTextColor}
               noOfLines={2}
               initial={{ opacity: 0 }}
@@ -146,13 +143,13 @@ const MarketCard = ({ market }: { market: Market }) => {
               </HStack>
             </HStack>
           </VStack>
-          
+
           <Flex direction="column" justify="flex-end" p={4} bg={useColorModeValue('gray.50', 'gray.600')} mt="auto">
             <HStack justify="space-between" mb={4}>
               <HStack>
                 <Icon as={FaCoins} color="yellow.500" />
                 <Text fontSize="sm" fontWeight="bold" color={textColor}>
-                  {(parseInt(market.resolution_bond) / 1000000).toLocaleString()} CMDX
+                  {(parseInt(market.resolution_bond) / 1000000).toLocaleString()} OSMO
                 </Text>
               </HStack>
               <Badge colorScheme="green" variant="subtle" borderRadius="full" px={2}>
@@ -168,7 +165,7 @@ const MarketCard = ({ market }: { market: Market }) => {
               fontWeight="bold"
               boxShadow="md"
               width="100%"
-              whileHover={{ 
+              whileHover={{
                 scale: 1.05,
                 boxShadow: '0 6px 20px rgba(66, 153, 225, 0.4)',
               }}
@@ -204,7 +201,7 @@ export default function FeaturedMarkets() {
       try {
         const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
         const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
+
         const query = {
           markets: {
             status: "Active",
@@ -213,7 +210,7 @@ export default function FeaturedMarkets() {
           }
         };
         const encodedQuery = encodeQuery(query);
-  
+
         const response = await axios.get(
           `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
         );
@@ -225,7 +222,7 @@ export default function FeaturedMarkets() {
         setIsLoading(false);
       }
     };
-  
+
     fetchMarkets();
   }, []);
 
