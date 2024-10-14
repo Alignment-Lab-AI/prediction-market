@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Window as KeplrWindow } from "@keplr-wallet/types";
 
 declare global {
-  interface Window extends KeplrWindow {}
+  interface Window extends KeplrWindow { }
 }
 
 interface Web3ContextType {
@@ -15,7 +15,8 @@ interface Web3ContextType {
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
 
-const COMDEX_CHAIN_ID = "comdex-1"; // Use the correct Comdex chain ID
+// const COMDEX_CHAIN_ID = "comdex-1"; // Use the correct Comdex chain ID
+const OSMO_CHAIN_ID = process.env.NEXT_PUBLIC_CHAIN_ID
 
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
@@ -26,44 +27,44 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         // Suggest the Comdex chain to Keplr
         await window.keplr.experimentalSuggestChain({
-          chainId: COMDEX_CHAIN_ID,
-          chainName: "Comdex",
-          rpc: "https://rpc.comdex.one",
-          rest: "https://rest.comdex.one",
+          chainId: OSMO_CHAIN_ID,
+          chainName: "Osmosis T",
+          rpc: "https://rpc.testnet.osmosis.zone",
+          rest: "https://lcd.testnet.osmosis.zone",
           bip44: {
             coinType: 118,
           },
           bech32Config: {
-            bech32PrefixAccAddr: "comdex",
-            bech32PrefixAccPub: "comdexpub",
-            bech32PrefixValAddr: "comdexvaloper",
-            bech32PrefixValPub: "comdexvaloperpub",
-            bech32PrefixConsAddr: "comdexvalcons",
-            bech32PrefixConsPub: "comdexvalconspub",
+            bech32PrefixAccAddr: "osmo",
+            bech32PrefixAccPub: "osmopub",
+            bech32PrefixValAddr: "osmovaloper",
+            bech32PrefixValPub: "osmovaloperpub",
+            bech32PrefixConsAddr: "osmovalcons",
+            bech32PrefixConsPub: "osmovalconspub",
           },
           currencies: [
             {
-              coinDenom: "CMDX",
-              coinMinimalDenom: "ucmdx",
+              coinDenom: "OSMO",
+              coinMinimalDenom: "uosmo",
               coinDecimals: 6,
             },
           ],
           feeCurrencies: [
             {
-              coinDenom: "CMDX",
-              coinMinimalDenom: "ucmdx",
+              coinDenom: "OSMO",
+              coinMinimalDenom: "uosmo",
               coinDecimals: 6,
             },
           ],
           stakeCurrency: {
-            coinDenom: "CMDX",
-            coinMinimalDenom: "ucmdx",
+            coinDenom: "OSMO",
+            coinMinimalDenom: "uosmo",
             coinDecimals: 6,
           },
         });
 
-        await window.keplr.enable(COMDEX_CHAIN_ID);
-        const offlineSigner = window.keplr.getOfflineSigner(COMDEX_CHAIN_ID);
+        await window.keplr.enable(OSMO_CHAIN_ID);
+        const offlineSigner = window.keplr.getOfflineSigner(OSMO_CHAIN_ID);
         const accounts = await offlineSigner.getAccounts();
         setWalletAddress(accounts[0].address);
         setIsWalletConnected(true);

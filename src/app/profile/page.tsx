@@ -140,7 +140,7 @@ const EditProfileModal = ({ isOpen, onClose, userProfile, onSave }) => {
           <VStack spacing={6}>
             <FormControl>
               <FormLabel fontWeight="medium">Name</FormLabel>
-              <Input 
+              <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 borderRadius="full"
@@ -149,7 +149,7 @@ const EditProfileModal = ({ isOpen, onClose, userProfile, onSave }) => {
             </FormControl>
             <FormControl>
               <FormLabel fontWeight="medium">Avatar</FormLabel>
-              <Input 
+              <Input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setEditAvatar(e.target.files[0])}
@@ -163,7 +163,7 @@ const EditProfileModal = ({ isOpen, onClose, userProfile, onSave }) => {
           </VStack>
         </ModalBody>
         <ModalFooter>
-          <Button 
+          <Button
             onClick={handleSave}
             bgGradient="linear(to-r, blue.400, purple.500)"
             color="white"
@@ -244,7 +244,7 @@ const UserProfilePage = () => {
           }
         };
         const encodedOrderQuery = encodeQuery(orderQuery);
-        
+
         const matchedBetQuery = {
           matched_bets: {
             user: walletAddress,
@@ -267,7 +267,7 @@ const UserProfilePage = () => {
         const lostBets = totalBets - wonBets;
         const winRate = totalBets > 0 ? (wonBets / totalBets) * 100 : 0;
         const balance = orderResponse.data.data.reduce((acc, order) => acc + parseFloat(order.amount), 0) +
-                        matchedBetResponse.data.data.reduce((acc, bet) => acc + parseFloat(bet.amount), 0);
+          matchedBetResponse.data.data.reduce((acc, bet) => acc + parseFloat(bet.amount), 0);
 
         setUserProfile(prev => ({
           ...prev,
@@ -276,7 +276,7 @@ const UserProfilePage = () => {
           wonBets,
           lostBets,
           winRate,
-          balance: balance / 1000000, // Convert to CMDX
+          balance: balance / 1000000, // Convert to OSMO
         }));
 
       } catch (err) {
@@ -404,9 +404,9 @@ const UserProfilePage = () => {
                       </Text>
                     </VStack>
                     <VStack align={{ base: "stretch", md: "end" }} spacing={4} width={{ base: "100%", md: "auto" }}>
-                      <Button 
-                        leftIcon={<Icon as={FaEdit} />} 
-                        onClick={onOpen} 
+                      <Button
+                        leftIcon={<Icon as={FaEdit} />}
+                        onClick={onOpen}
                         bgGradient={gradientColor}
                         color="white"
                         _hover={{
@@ -419,10 +419,10 @@ const UserProfilePage = () => {
                         Edit Profile
                       </Button>
                       <NextLink href="/admin-dashboard" passHref>
-                        <Button 
-                          as="a" 
-                          leftIcon={<Icon as={FaUserShield} />} 
-                          colorScheme="purple" 
+                        <Button
+                          as="a"
+                          leftIcon={<Icon as={FaUserShield} />}
+                          colorScheme="purple"
                           size={{ base: "md", md: "lg" }}
                           borderRadius="full"
                           width={{ base: "100%", md: "auto" }}
@@ -438,10 +438,10 @@ const UserProfilePage = () => {
 
             <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={6}>
               {[
-                { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} CMDX`, color: 'blue.400' },
+                { label: 'Wallet Balance', icon: FaWallet, value: `${userProfile.balance.toFixed(2)} OSMO`, color: 'blue.400' },
                 { label: 'Total Bets', icon: FaChartBar, value: userProfile.totalBets, color: 'purple.500' },
                 { label: 'Win Rate', icon: FaTrophy, value: `${userProfile.winRate.toFixed(2)}%`, color: 'yellow.400', helpText: `${userProfile.wonBets} won / ${userProfile.lostBets} lost` },
-                { label: 'Profit/Loss', icon: FaExchangeAlt, value: `${userProfile.balance > 0 ? '+' : ''}${userProfile.balance.toFixed(2)} CMDX`, color: userProfile.balance > 0 ? 'green.400' : 'red.400' },
+                { label: 'Profit/Loss', icon: FaExchangeAlt, value: `${userProfile.balance > 0 ? '+' : ''}${userProfile.balance.toFixed(2)} OSMO`, color: userProfile.balance > 0 ? 'green.400' : 'red.400' },
               ].map((stat, index) => (
                 <MotionBox
                   key={index}
@@ -450,12 +450,12 @@ const UserProfilePage = () => {
                   transition={{ duration: 0.5, delay: index * 0.1 }}
                   whileHover={{ y: -5, boxShadow: "2xl" }}
                 >
-                  <Stat 
-                    px={4} 
+                  <Stat
+                    px={4}
                     py={6}
                     bg={cardBgColor}
                     backdropFilter="blur(10px)"
-                    borderRadius="2xl" 
+                    borderRadius="2xl"
                     boxShadow="xl"
                     border="1px solid"
                     borderColor={borderColor}
@@ -488,8 +488,8 @@ const UserProfilePage = () => {
                         {stat.helpText}
                       </StatHelpText>
                     )}
-                    <Progress 
-                      value={stat.label === 'Win Rate' ? userProfile.winRate : 100} 
+                    <Progress
+                      value={stat.label === 'Win Rate' ? userProfile.winRate : 100}
                       colorScheme={stat.color.split('.')[0]}
                       size="sm"
                       mt={4}
@@ -506,11 +506,11 @@ const UserProfilePage = () => {
               transition={{ duration: 0.5, delay: 0.4 }}
             >
               <Tabs variant="soft-rounded" colorScheme="blue" isLazy>
-                <TabList 
+                <TabList
                   bg={cardBgColor}
                   backdropFilter="blur(10px)"
-                  p={4} 
-                  borderRadius="2xl" 
+                  p={4}
+                  borderRadius="2xl"
                   boxShadow="md"
                   border="1px solid"
                   borderColor={borderColor}
@@ -523,11 +523,11 @@ const UserProfilePage = () => {
 
                 <TabPanels mt={6}>
                   <TabPanel>
-                    <Box 
+                    <Box
                       bg={cardBgColor}
                       backdropFilter="blur(10px)"
-                      p={4} 
-                      borderRadius="2xl" 
+                      p={4}
+                      borderRadius="2xl"
                       boxShadow="xl"
                       border="1px solid"
                       borderColor={borderColor}
@@ -564,9 +564,9 @@ const UserProfilePage = () => {
                                           {order.side}
                                         </Badge>
                                       </Td>
-                                      <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} OSMO</Td>
                                       <Td>{(order.odds / 100).toFixed(2)}</Td>
-                                      <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} OSMO</Td>
                                       <Td>
                                         <Badge colorScheme={order.status === 'Open' ? 'green' : 'yellow'}>
                                           {order.status}
@@ -596,7 +596,7 @@ const UserProfilePage = () => {
                                   {matchedBets.map((bet) => (
                                     <Tr key={bet.id}>
                                       <Td>{bet.market_id}</Td>
-                                      <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} OSMO</Td>
                                       <Td>{(bet.odds / 100).toFixed(2)}</Td>
                                       <Td>
                                         <Badge colorScheme={bet.back_user === walletAddress ? 'green' : 'red'}>
@@ -638,9 +638,9 @@ const UserProfilePage = () => {
                                           {order.side}
                                         </Badge>
                                       </Td>
-                                      <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} OSMO</Td>
                                       <Td>{(order.odds / 100).toFixed(2)}</Td>
-                                      <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
+                                      <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} OSMO</Td>
                                       <Td>
                                         <Badge colorScheme={order.status === 'Filled' ? 'green' : 'red'}>
                                           {order.status}
@@ -687,11 +687,11 @@ const UserProfilePage = () => {
                     </Box>
                   </TabPanel>
                   <TabPanel>
-                    <Box 
+                    <Box
                       bg={cardBgColor}
                       backdropFilter="blur(10px)"
-                      p={6} 
-                      borderRadius="2xl" 
+                      p={6}
+                      borderRadius="2xl"
                       boxShadow="xl"
                       border="1px solid"
                       borderColor={borderColor}
@@ -729,7 +729,7 @@ const UserProfilePage = () => {
                 <VStack align="start" spacing={4}>
                   <HStack>
                     <Icon as={FaInfoCircle} color="blue.500" />
-                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Wallet Balance:</strong> This is your current balance in CMDX tokens.</Text>
+                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Wallet Balance:</strong> This is your current balance in OSMO tokens.</Text>
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="purple.500" />
@@ -741,7 +741,7 @@ const UserProfilePage = () => {
                   </HStack>
                   <HStack>
                     <Icon as={FaInfoCircle} color="green.500" />
-                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Profit/Loss:</strong> Your overall performance in CMDX tokens, considering all your bets.</Text>
+                    <Text fontSize={{ base: "sm", md: "md" }}><strong>Profit/Loss:</strong> Your overall performance in OSMO tokens, considering all your bets.</Text>
                   </HStack>
                 </VStack>
               </Box>
@@ -750,9 +750,9 @@ const UserProfilePage = () => {
         </Container>
       </Box>
 
-      <EditProfileModal 
-        isOpen={isOpen} 
-        onClose={onClose} 
+      <EditProfileModal
+        isOpen={isOpen}
+        onClose={onClose}
         userProfile={userProfile}
         onSave={handleProfileSave}
       />

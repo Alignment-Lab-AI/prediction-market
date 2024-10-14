@@ -138,7 +138,7 @@ const MarketHeader = ({ market }: { market: Market }) => {
           </HStack>
           <HStack>
             <Icon as={FaCoins} color="yellow.500" />
-            <Text fontWeight="bold">{(parseInt(market.resolution_bond) / 1000000).toLocaleString()} CMDX</Text>
+            <Text fontWeight="bold">{(parseInt(market.resolution_bond) / 1000000).toLocaleString()} OSMO</Text>
           </HStack>
           <Badge colorScheme={statusColor} fontSize="md" px={3} py={1} borderRadius="full">
             {market.status}
@@ -150,14 +150,14 @@ const MarketHeader = ({ market }: { market: Market }) => {
   );
 };
 
-const OrderBook = ({ 
-  selectedOption, 
-  onSelectOdds, 
-  marketId, 
-  optionIndex 
-}: { 
-  selectedOption: string, 
-  onSelectOdds: (odds: number, betType: 'back' | 'lay') => void, 
+const OrderBook = ({
+  selectedOption,
+  onSelectOdds,
+  marketId,
+  optionIndex
+}: {
+  selectedOption: string,
+  onSelectOdds: (odds: number, betType: 'back' | 'lay') => void,
   marketId: number,
   optionIndex: number
 }) => {
@@ -231,11 +231,11 @@ const OrderBook = ({
           </Flex>
           {backOrders.slice(0, 3).map((order, index) => (
             <Tooltip key={order.id} label={`Click to place a back bet at ${(order.odds / 100).toFixed(2)}`} placement="left">
-              <Flex 
-                bg={getBackgroundColor(index, true)} 
-                p={2} 
-                borderRadius="md" 
-                cursor="pointer" 
+              <Flex
+                bg={getBackgroundColor(index, true)}
+                p={2}
+                borderRadius="md"
+                cursor="pointer"
                 onClick={() => onSelectOdds(order.odds / 100, 'back')}
               >
                 <Box flex={1}>{((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)}</Box>
@@ -257,11 +257,11 @@ const OrderBook = ({
           </Flex>
           {layOrders.slice(0, 3).map((order, index) => (
             <Tooltip key={order.id} label={`Click to place a lay bet at ${(order.odds / 100).toFixed(2)}`} placement="right">
-              <Flex 
-                bg={getBackgroundColor(index, false)} 
-                p={2} 
-                borderRadius="md" 
-                cursor="pointer" 
+              <Flex
+                bg={getBackgroundColor(index, false)}
+                p={2}
+                borderRadius="md"
+                cursor="pointer"
                 onClick={() => onSelectOdds(order.odds / 100, 'lay')}
               >
                 <Box flex={1} fontWeight="bold">{(order.odds / 100).toFixed(2)}</Box>
@@ -331,9 +331,9 @@ const OptionsList = ({ options, onSelectOption, market, onSelectOdds }: { option
             </AccordionButton>
           </h2>
           <AccordionPanel pb={4}>
-            <OrderBook 
-              selectedOption={option} 
-              onSelectOdds={onSelectOdds} 
+            <OrderBook
+              selectedOption={option}
+              onSelectOdds={onSelectOdds}
               marketId={market.id}
               optionIndex={index}
             />
@@ -395,14 +395,14 @@ const BettingInterface = ({ market, selectedOption, selectedOptionIndex, onBetPl
           option_id: selectedOptionIndex,
           order_type: "limit",
           side: betType === 'back' ? "Back" : "Lay",
-          amount: (betAmount * 1000000).toString(), // Convert to ucmdx
+          amount: (betAmount * 1000000).toString(), // Convert to uosmo
           odds: Math.round(odds * 100) // Convert to integer representation
         }
       };
 
       // Calculate the amount to be sent
       const amountToSend = betType === 'back' ? betAmount : parseFloat(calculateLiability());
-      const funds = [{ denom: "ucmdx", amount: (amountToSend * 1000000).toString() }];
+      const funds = [{ denom: "uosmo", amount: (amountToSend * 1000000).toString() }];
 
       console.log("Placing bet:", JSON.stringify(msg, null, 2));
 
@@ -412,7 +412,7 @@ const BettingInterface = ({ market, selectedOption, selectedOptionIndex, onBetPl
 
       toast({
         title: "Bet Placed",
-        description: `You placed a ${betType} bet of ${betAmount} CMDX on "${selectedOption}" at ${odds} odds. Transaction hash: ${result.transactionHash}`,
+        description: `You placed a ${betType} bet of ${betAmount} OSMO on "${selectedOption}" at ${odds} odds. Transaction hash: ${result.transactionHash}`,
         status: "success",
         duration: 5000,
         isClosable: true,
@@ -511,7 +511,7 @@ const BettingInterface = ({ market, selectedOption, selectedOptionIndex, onBetPl
             {betType === 'back' ? 'Potential profit:' : 'Potential liability:'}
           </Text>
           <Text fontSize="xl" fontWeight="bold" color={betType === 'back' ? 'green.500' : 'red.500'}>
-            {betType === 'back' ? calculatePotentialWin() : calculateLiability()} CMDX
+            {betType === 'back' ? calculatePotentialWin() : calculateLiability()} OSMO
           </Text>
         </Box>
         <Button
@@ -553,7 +553,7 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
     try {
       const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
       const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
+
       const query = {
         market_orders: {
           market_id: marketId,
@@ -562,11 +562,11 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
         }
       };
       const encodedQuery = encodeQuery(query);
-  
+
       const response = await axios.get(
         `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
       );
-  
+
       setOrders(response.data.data);
       setIsLoading(false);
     } catch (error) {
@@ -619,7 +619,7 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
           <Heading size="md" color={headingColor}>Recent Orders</Heading>
           <Icon as={FaExchangeAlt} color="blue.500" boxSize={6} />
         </HStack>
-        
+
         {orders.length === 0 ? (
           <Text color={textColor} textAlign="center">No recent orders for this market.</Text>
         ) : (
@@ -641,7 +641,7 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
                     </Badge>
                   </Td>
                   <Td isNumeric>
-                    {((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)} CMDX
+                    {((Number(order.amount) - Number(order.filled_amount)) / 1000000).toFixed(2)} OSMO
                   </Td>
                   <Td isNumeric>{(order.odds / 100).toFixed(2)}</Td>
                   <Td>
@@ -654,7 +654,7 @@ const RecentOrders = ({ marketId }: { marketId: number }) => {
             </Tbody>
           </Table>
         )}
-        
+
         <Button
           as={NextLink}
           href="/my-bets"
@@ -740,7 +740,7 @@ const CommentSection = ({ marketId }: { marketId: number }) => {
             onChange={(e) => setNewComment(e.target.value)}
             borderRadius="full"
           />
-          <Button 
+          <Button
             onClick={handleAddComment}
             colorScheme="blue"
             borderRadius="full"
@@ -891,8 +891,8 @@ const MarketContent = ({ id }: { id: string }) => {
         width="100%"
       >
         <Heading size="lg" mb={4}>Market Options</Heading>
-        <OptionsList 
-          options={market.options} 
+        <OptionsList
+          options={market.options}
           onSelectOption={(option, index) => {
             setSelectedOption(option);
             setSelectedOptionIndex(index);
@@ -901,9 +901,9 @@ const MarketContent = ({ id }: { id: string }) => {
           onSelectOdds={handleSelectOdds}
         />
       </MotionBox>
-      <BettingInterface 
-        market={market} 
-        selectedOption={selectedOption} 
+      <BettingInterface
+        market={market}
+        selectedOption={selectedOption}
         selectedOptionIndex={selectedOptionIndex}
         onBetPlaced={handleBetPlaced}
       />
@@ -939,8 +939,8 @@ const MarketContent = ({ id }: { id: string }) => {
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <Heading size="lg" mb={4}>Market Options</Heading>
-                <OptionsList 
-                  options={market.options} 
+                <OptionsList
+                  options={market.options}
                   onSelectOption={(option, index) => {
                     setSelectedOption(option);
                     setSelectedOptionIndex(index);
@@ -958,9 +958,9 @@ const MarketContent = ({ id }: { id: string }) => {
               transition={{ duration: 0.5, delay: 0.3 }}
             >
               <Box position="sticky" top={4}>
-                <BettingInterface 
-                  market={market} 
-                  selectedOption={selectedOption} 
+                <BettingInterface
+                  market={market}
+                  selectedOption={selectedOption}
                   selectedOptionIndex={selectedOptionIndex}
                   onBetPlaced={handleBetPlaced}
                 />

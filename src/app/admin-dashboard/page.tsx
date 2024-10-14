@@ -56,7 +56,7 @@ import { motion } from 'framer-motion';
 import { getRealConfig, getWhitelistedAddresses } from '../../utils/api';
 import { broadcastTransaction, connectKeplr } from '../../utils/web3';
 import { DeliverTxResponse } from "@cosmjs/stargate";
-import { useWeb3 } from '../../contexts/Web3Context'; 
+import { useWeb3 } from '../../contexts/Web3Context';
 import { encodeQuery } from '../../utils/queryUtils';
 
 const theme = extendTheme({
@@ -114,7 +114,7 @@ const AdminDashboard = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const { isOpen: isProposeResultOpen, onClose: onCloseProposeResult } = useDisclosure();
-  
+
   const [editingConfig, setEditingConfig] = useState({ field: '', value: '' });
   const { isOpen: isEditConfigOpen, onOpen: onEditConfigOpen, onClose: onEditConfigClose } = useDisclosure();
 
@@ -131,7 +131,7 @@ const AdminDashboard = () => {
     try {
       const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
       const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
+
       const query = {
         markets: {
           status: "Active",
@@ -140,7 +140,7 @@ const AdminDashboard = () => {
         }
       };
       const encodedQuery = encodeQuery(query);
-  
+
       const response = await axios.get(
         `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
       );
@@ -157,12 +157,12 @@ const AdminDashboard = () => {
       });
     }
   };
-  
+
   const fetchWhitelistedAddresses = async () => {
     try {
       const REAL_BASE_URL = process.env.NEXT_PUBLIC_REST_URL;
       const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
+
       const query = {
         whitelisted_addresses: {
           start_after: null,
@@ -170,18 +170,18 @@ const AdminDashboard = () => {
         }
       };
       const encodedQuery = encodeQuery(query);
-  
+
       const response = await axios.get(
         `${REAL_BASE_URL}/cosmwasm/wasm/v1/contract/${CONTRACT_ADDRESS}/smart/${encodedQuery}`
       );
-      
+
       if (response.data && Array.isArray(response.data.data)) {
         setWhitelistedAddresses(response.data.data);
       } else {
         console.error('Unexpected response structure:', response.data);
         setWhitelistedAddresses([]);
       }
-      
+
       setIsLoading(false);
     } catch (error) {
       console.error('Error fetching whitelisted addresses:', error);
@@ -238,33 +238,33 @@ const AdminDashboard = () => {
       if (!chainId || !contractAddress) {
         throw new Error("Chain ID or Contract address not defined in environment variables");
       }
-  
+
       console.log("Preparing to add address to whitelist:", newAddress);
-  
+
       const msg = {
         add_to_whitelist: {
           address: newAddress
         }
       };
-  
+
       const funds: { denom: string; amount: string }[] = [];
-  
+
       console.log("Sending transaction to add to whitelist:", JSON.stringify(msg, null, 2));
-  
+
       const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
-  
+
       const bigIntStringifier = (key: string, value: any) => {
         if (typeof value === 'bigint') {
           return value.toString();
         }
         return value;
       };
-  
+
       console.log("Add to whitelist result:", JSON.stringify(result, bigIntStringifier, 2));
-  
+
       setWhitelistedAddresses(prevAddresses => [...prevAddresses, newAddress]);
       setNewAddress('');
-  
+
       toast({
         title: "Address Added",
         description: `${newAddress} has been added to the whitelist. Transaction hash: ${result.transactionHash}`,
@@ -272,7 +272,7 @@ const AdminDashboard = () => {
         duration: 5000,
         isClosable: true,
       });
-  
+
     } catch (err) {
       console.error("Error adding address to whitelist:", err);
       toast({
@@ -302,32 +302,23 @@ const AdminDashboard = () => {
       if (!chainId || !contractAddress) {
         throw new Error("Chain ID or Contract address not defined in environment variables");
       }
-  
       console.log("Preparing to remove address from whitelist:", address);
-  
       const msg = {
         remove_from_whitelist: {
           address: address
         }
       };
-  
       const funds: { denom: string; amount: string }[] = [];
-  
       console.log("Sending transaction to remove from whitelist:", JSON.stringify(msg, null, 2));
-  
       const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
-  
       const bigIntStringifier = (key: string, value: any) => {
         if (typeof value === 'bigint') {
           return value.toString();
         }
         return value;
       };
-  
       console.log("Remove from whitelist result:", JSON.stringify(result, bigIntStringifier, 2));
-  
       setWhitelistedAddresses(prevAddresses => prevAddresses.filter(a => a !== address));
-  
       toast({
         title: "Address Removed",
         description: `${address} has been removed from the whitelist. Transaction hash: ${result.transactionHash}`,
@@ -335,7 +326,6 @@ const AdminDashboard = () => {
         duration: 5000,
         isClosable: true,
       });
-  
     } catch (err) {
       console.error("Error removing address from whitelist:", err);
       toast({
@@ -359,38 +349,28 @@ const AdminDashboard = () => {
       });
       return;
     }
-  
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
       if (!chainId || !contractAddress) {
         throw new Error("Chain ID or Contract address not defined in environment variables");
       }
-  
       console.log("Preparing to cancel market:", marketId);
-  
       const msg = {
         cancel_market: {
           market_id: marketId
         }
       };
-  
       const funds: { denom: string; amount: string }[] = [];
-  
       console.log("Sending transaction to cancel market:", JSON.stringify(msg, null, 2));
-  
       const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
-  
       const bigIntStringifier = (key: string, value: any) => {
         if (typeof value === 'bigint') {
           return value.toString();
         }
         return value;
       };
-  
       console.log("Cancel market result:", JSON.stringify(result, bigIntStringifier, 2));
-  
       toast({
         title: "Market Cancelled",
         description: `Market ${marketId} has been cancelled. Transaction hash: ${result.transactionHash}`,
@@ -398,7 +378,6 @@ const AdminDashboard = () => {
         duration: 5000,
         isClosable: true,
       });
-  
       fetchMarkets();
     } catch (err) {
       console.error("Error cancelling market:", err);
@@ -423,38 +402,28 @@ const AdminDashboard = () => {
       });
       return;
     }
-  
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
       if (!chainId || !contractAddress) {
         throw new Error("Chain ID or Contract address not defined in environment variables");
       }
-  
       console.log("Preparing to close market:", marketId);
-  
       const msg = {
         close_market: {
           market_id: marketId
         }
       };
-  
       const funds: { denom: string; amount: string }[] = [];
-  
       console.log("Sending transaction to close market:", JSON.stringify(msg, null, 2));
-  
       const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
-  
       const bigIntStringifier = (key: string, value: any) => {
         if (typeof value === 'bigint') {
           return value.toString();
         }
         return value;
       };
-  
       console.log("Close market result:", JSON.stringify(result, bigIntStringifier, 2));
-  
       toast({
         title: "Market Closed",
         description: `Market ${marketId} has been closed. Transaction hash: ${result.transactionHash}`,
@@ -462,7 +431,6 @@ const AdminDashboard = () => {
         duration: 5000,
         isClosable: true,
       });
-  
       fetchMarkets();
     } catch (err) {
       console.error("Error closing market:", err);
@@ -545,39 +513,29 @@ const AdminDashboard = () => {
       });
       return;
     }
-  
     try {
       const chainId = process.env.NEXT_PUBLIC_CHAIN_ID;
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
-  
       if (!chainId || !contractAddress) {
         throw new Error("Chain ID or Contract address not defined in environment variables");
       }
-  
       console.log("Preparing to update config:", editingConfig);
-  
       const msg = {
         update_config: {
           field: editingConfig.field,
           value: editingConfig.value
         }
       };
-  
       const funds: { denom: string; amount: string }[] = [];
-  
       console.log("Sending transaction to update config:", JSON.stringify(msg, null, 2));
-  
       const result = await broadcastTransaction(chainId, contractAddress, msg, funds);
-  
       const bigIntStringifier = (key: string, value: any) => {
         if (typeof value === 'bigint') {
           return value.toString();
         }
         return value;
       };
-  
       console.log("Update config result:", JSON.stringify(result, bigIntStringifier, 2));
-  
       toast({
         title: "Config Updated",
         description: `${editingConfig.field} has been updated to ${editingConfig.value}. Transaction hash: ${result.transactionHash}`,
@@ -585,7 +543,6 @@ const AdminDashboard = () => {
         duration: 5000,
         isClosable: true,
       });
-  
       onEditConfigClose();
       const updatedConfig = await getRealConfig();
       setConfig(updatedConfig);
@@ -609,7 +566,7 @@ const AdminDashboard = () => {
     );
   }
 
-  const filteredMarkets = markets.filter(market => 
+  const filteredMarkets = markets.filter(market =>
     filter === 'All' || market.status === filter
   );
 
@@ -823,7 +780,7 @@ const AdminDashboard = () => {
                           <Box overflowX="auto">
                             <Table variant="simple" size={{ base: "sm", md: "md" }}>
                               <Thead>
-                              <Tr>
+                                <Tr>
                                   <Th>Address</Th>
                                   <Th>Action</Th>
                                 </Tr>
@@ -893,7 +850,7 @@ const AdminDashboard = () => {
                         <GridItem>
                           <Stat>
                             <StatLabel fontWeight="medium" color={textColor}>Minimum Bet</StatLabel>
-                            <StatNumber fontSize={{ base: "sm", md: "md" }} color={accentColor}>{parseInt(config?.min_bet || '0') / 1000000} CMDX</StatNumber>
+                            <StatNumber fontSize={{ base: "sm", md: "md" }} color={accentColor}>{parseInt(config?.min_bet || '0') / 1000000} OSMO</StatNumber>
                           </Stat>
                         </GridItem>
                         <GridItem>

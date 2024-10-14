@@ -217,7 +217,7 @@ const ResolveMarketPage = () => {
       };
 
       const funds = [{
-        denom: "ucmdx",
+        denom: "uosmo",
         amount: selectedMarket.resolution_bond
       }];
 
@@ -274,7 +274,7 @@ const ResolveMarketPage = () => {
       };
 
       const funds = [{
-        denom: "ucmdx",
+        denom: "uosmo",
         amount: selectedMarket.resolution_bond
       }];
 
@@ -375,11 +375,11 @@ const ResolveMarketPage = () => {
         <SimpleGrid columns={2} spacing={4}>
           <Stat>
             <StatLabel>Bond Amount</StatLabel>
-            <StatNumber>{parseInt(market.resolution_bond) / 1000000} CMDX</StatNumber>
+            <StatNumber>{parseInt(market.resolution_bond) / 1000000} OSMO</StatNumber>
           </Stat>
           <Stat>
             <StatLabel>Reward Amount</StatLabel>
-            <StatNumber>{parseInt(market.resolution_reward) / 1000000} CMDX</StatNumber>
+            <StatNumber>{parseInt(market.resolution_reward) / 1000000} OSMO</StatNumber>
           </Stat>
         </SimpleGrid>
         <Divider />
@@ -487,12 +487,12 @@ const ResolveMarketPage = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <Flex 
-                justifyContent="space-between" 
-                alignItems="center" 
-                bg={cardBgColor} 
-                p={8} 
-                borderRadius="2xl" 
+              <Flex
+                justifyContent="space-between"
+                alignItems="center"
+                bg={cardBgColor}
+                p={8}
+                borderRadius="2xl"
                 boxShadow="xl"
                 bgGradient={gradientColor}
               >
@@ -571,7 +571,7 @@ const ResolveMarketPage = () => {
                   </Stat>
                   <Stat>
                     <StatLabel>Minimum Bet</StatLabel>
-                    <StatNumber>{parseInt(config.min_bet) / 1000000} CMDX</StatNumber>
+                    <StatNumber>{parseInt(config.min_bet) / 1000000} OSMO</StatNumber>
                   </Stat>
                 </SimpleGrid>
               </Box>
@@ -589,8 +589,8 @@ const ResolveMarketPage = () => {
           <ModalBody>
             <FormControl>
               <FormLabel>Winning Outcome</FormLabel>
-              <Select 
-                value={proposedOutcome} 
+              <Select
+                value={proposedOutcome}
                 onChange={(e) => setProposedOutcome(e.target.value)}
                 bg={useColorModeValue("white", "gray.700")}
               >
@@ -602,20 +602,20 @@ const ResolveMarketPage = () => {
             <VStack mt={4} align="stretch" spacing={4}>
               <Stat>
                 <StatLabel>Bond Amount</StatLabel>
-                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_bond) / 1000000} CMDX</StatNumber>
+                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_bond) / 1000000} OSMO</StatNumber>
                 <StatHelpText>Required to propose a result</StatHelpText>
               </Stat>
               <Stat>
                 <StatLabel>Reward Amount</StatLabel>
-                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_reward) / 1000000} CMDX</StatNumber>
+                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_reward) / 1000000} OSMO</StatNumber>
                 <StatHelpText>Earned for successful resolution</StatHelpText>
               </Stat>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button 
-              colorScheme="blue" 
-              mr={3} 
+            <Button
+              colorScheme="blue"
+              mr={3}
               onClick={handleProposeResult}
               bgGradient={gradientColor}
               _hover={{
@@ -638,8 +638,8 @@ const ResolveMarketPage = () => {
           <ModalBody>
             <FormControl mb={4}>
               <FormLabel>Proposed Outcome</FormLabel>
-              <Select 
-                value={disputeOutcome} 
+              <Select
+                value={disputeOutcome}
                 onChange={(e) => setDisputeOutcome(e.target.value)}
                 bg={useColorModeValue("white", "gray.700")}
               >
@@ -650,7 +650,7 @@ const ResolveMarketPage = () => {
             </FormControl>
             <FormControl>
               <FormLabel>Evidence</FormLabel>
-              <Textarea 
+              <Textarea
                 value={disputeEvidence}
                 onChange={(e) => setDisputeEvidence(e.target.value)}
                 placeholder="Provide evidence supporting your proposed outcome"
@@ -660,7 +660,7 @@ const ResolveMarketPage = () => {
             <VStack mt={4} align="stretch" spacing={4}>
               <Stat>
                 <StatLabel>Bond Amount</StatLabel>
-                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_bond) / 1000000} CMDX</StatNumber>
+                <StatNumber>{selectedMarket && parseInt(selectedMarket.resolution_bond) / 1000000} OSMO</StatNumber>
                 <StatHelpText>Required to raise a dispute</StatHelpText>
               </Stat>
               <Stat>
@@ -671,9 +671,9 @@ const ResolveMarketPage = () => {
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button 
-              colorScheme="red" 
-              mr={3} 
+            <Button
+              colorScheme="red"
+              mr={3}
               onClick={handleRaiseDispute}
               bgGradient="linear(to-r, red.400, pink.500)"
               _hover={{
@@ -713,9 +713,9 @@ const ResolveMarketPage = () => {
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button 
-              colorScheme="green" 
-              mr={3} 
+            <Button
+              colorScheme="green"
+              mr={3}
               onClick={handleCastVote}
               bgGradient="linear(to-r, green.400, teal.500)"
               _hover={{

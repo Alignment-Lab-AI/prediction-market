@@ -196,7 +196,7 @@ const MyBetsPage = () => {
           };
           const encodedOrderQuery = encodeQuery(orderQuery);
           console.log(`Fetching orders for market ${market.id} with query:`, encodedOrderQuery);
-          
+
           const matchedBetQuery = {
             matched_bets: {
               market_id: market.id,
@@ -238,7 +238,7 @@ const MyBetsPage = () => {
 
   const totalBets = orders.length + matchedBets.length;
   const currentBalance = orders.reduce((sum, order) => sum + parseFloat(order.amount), 0) +
-                         matchedBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
+    matchedBets.reduce((sum, bet) => sum + parseFloat(bet.amount), 0);
   const profitLoss = matchedBets.reduce((sum, bet) => {
     if (bet.redeemed) {
       return sum + (parseFloat(bet.amount) * (bet.odds / 100) - parseFloat(bet.amount));
@@ -285,7 +285,7 @@ const MyBetsPage = () => {
       });
 
       // Update the local state to reflect the cancellation
-      setOrders(orders.map(order => order.id === orderId ? {...order, status: 'Cancelled'} : order));
+      setOrders(orders.map(order => order.id === orderId ? { ...order, status: 'Cancelled' } : order));
     } catch (err) {
       console.error("Error cancelling order:", err);
       toast({
@@ -337,7 +337,7 @@ const MyBetsPage = () => {
       });
 
       // Update the local state to reflect the redemption
-      setMatchedBets(matchedBets.map(bet => bet.id === matchedBetId ? {...bet, redeemed: true} : bet));
+      setMatchedBets(matchedBets.map(bet => bet.id === matchedBetId ? { ...bet, redeemed: true } : bet));
     } catch (err) {
       console.error("Error redeeming winnings:", err);
       toast({
@@ -374,7 +374,7 @@ const MyBetsPage = () => {
             <Heading textAlign="center" bgGradient={gradientColor} bgClip="text" fontSize={{ base: "3xl", md: "4xl" }} fontWeight="extrabold" mb={8}>
               My Bets Dashboard
             </Heading>
-            
+
             {/* Statistics Grid */}
             <Grid templateColumns={{ base: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }} gap={6}>
               {[
@@ -429,199 +429,199 @@ const MyBetsPage = () => {
                 </TabList>
 
                 <TabPanels>
-                <TabPanel>
-                  <Box overflowX="auto">
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Market</Th>
-                          <Th>Side</Th>
-                          <Th>Amount</Th>
-                          <Th>Odds</Th>
-                          <Th>Filled Amount</Th>
-                          <Th>Timestamp</Th>
-                          <Th>Action</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                      {activeOrders
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                        .map((order) => (
-                            <Tr key={order.id}>
-                              <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
-                              <Td>
-                                <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
-                                  {order.side}
-                                </Badge>
-                              </Td>
-                              <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
-                              <Td>{(order.odds / 100).toFixed(2)}</Td>
-                              <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
-                              <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
-                              <Td>
-                                <Button
-                                  onClick={() => cancelOrder(order.id)}
-                                  bgGradient="linear(to-r, red.400, pink.500)"
-                                  color="white"
-                                  _hover={{
-                                    bgGradient: "linear(to-r, red.500, pink.600)",
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: 'lg',
-                                  }}
-                                  _active={{
-                                    transform: 'translateY(0)',
-                                    boxShadow: 'md',
-                                  }}
-                                  size="sm"
-                                  fontWeight="bold"
-                                  borderRadius="full"
-                                  leftIcon={<FaTimesCircle />}
-                                >
-                                  Cancel
-                                </Button>
-                              </Td>
-                            </Tr>
-                          ))}
-                      </Tbody>
-                    </Table>
-                  </Box>
-                  <Pagination 
-                    items={activeOrders}
-                    currentPage={currentPage}
-                    itemsPerPage={itemsPerPage}
-                    setCurrentPage={setCurrentPage}
-                  />
-                </TabPanel>
-
-                <TabPanel>
-                  <Box overflowX="auto">
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Market</Th>
-                          <Th>Amount</Th>
-                          <Th>Odds</Th>
-                          <Th>Role</Th>
-                          <Th>Status</Th>
-                          <Th>Timestamp</Th>
-                          <Th>Action</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                      {matchedBets
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                        .map((bet) => {
-                            const isBackUser = bet.back_user === walletAddress;
-                            const market = markets.find(m => m.id === bet.market_id);
-                            const marketResolved = market?.status === 'Resolved';
-                            return (
-                              <Tr key={bet.id}>
-                                <Td>{market?.question}</Td>
-                                <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} CMDX</Td>
-                                <Td>{(bet.odds / 100).toFixed(2)}</Td>
+                  <TabPanel>
+                    <Box overflowX="auto">
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>Market</Th>
+                            <Th>Side</Th>
+                            <Th>Amount</Th>
+                            <Th>Odds</Th>
+                            <Th>Filled Amount</Th>
+                            <Th>Timestamp</Th>
+                            <Th>Action</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {activeOrders
+                            .sort((a, b) => b.timestamp - a.timestamp)
+                            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                            .map((order) => (
+                              <Tr key={order.id}>
+                                <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
                                 <Td>
-                                  <Badge colorScheme={isBackUser ? 'green' : 'red'}>
-                                    {isBackUser ? 'Back' : 'Lay'}
+                                  <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                                    {order.side}
                                   </Badge>
                                 </Td>
+                                <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} OSMO</Td>
+                                <Td>{(order.odds / 100).toFixed(2)}</Td>
+                                <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} OSMO</Td>
+                                <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
                                 <Td>
-                                  {bet.redeemed ? (
-                                    <Badge colorScheme="green">Redeemed</Badge>
-                                  ) : marketResolved ? (
-                                    <Badge colorScheme="yellow">Ready to Redeem</Badge>
-                                  ) : (
-                                    <Badge colorScheme="blue">Active</Badge>
-                                  )}
-                                </Td>
-                                <Td>{new Date(bet.timestamp * 1000).toLocaleString()}</Td>
-                                <Td>
-                                  <Tooltip label={!marketResolved ? "Market not yet resolved" : bet.redeemed ? "Already redeemed" : "Redeem your winnings"}>
-                                    <Button
-                                      onClick={() => redeemWinnings(bet.id)}
-                                      isDisabled={!marketResolved || bet.redeemed}
-                                      bgGradient="linear(to-r, green.400, teal.500)"
-                                      color="white"
-                                      _hover={{
-                                        bgGradient: "linear(to-r, green.500, teal.600)",
-                                        transform: 'translateY(-2px)',
-                                        boxShadow: 'lg',
-                                      }}
-                                      _active={{
-                                        transform: 'translateY(0)',
-                                        boxShadow: 'md',
-                                      }}
-                                      size="sm"
-                                      fontWeight="bold"
-                                      borderRadius="full"
-                                      leftIcon={<FaCheckCircle />}
-                                    >
-                                      Redeem
-                                    </Button>
-                                  </Tooltip>
+                                  <Button
+                                    onClick={() => cancelOrder(order.id)}
+                                    bgGradient="linear(to-r, red.400, pink.500)"
+                                    color="white"
+                                    _hover={{
+                                      bgGradient: "linear(to-r, red.500, pink.600)",
+                                      transform: 'translateY(-2px)',
+                                      boxShadow: 'lg',
+                                    }}
+                                    _active={{
+                                      transform: 'translateY(0)',
+                                      boxShadow: 'md',
+                                    }}
+                                    size="sm"
+                                    fontWeight="bold"
+                                    borderRadius="full"
+                                    leftIcon={<FaTimesCircle />}
+                                  >
+                                    Cancel
+                                  </Button>
                                 </Td>
                               </Tr>
-                            );
-                          })}
-                      </Tbody>
-                    </Table>
-                  </Box>
-                  <Pagination 
-                    items={matchedBets}
-                    currentPage={currentPage}
-                    itemsPerPage={itemsPerPage}
-                    setCurrentPage={setCurrentPage}
-                  />
-                </TabPanel>
+                            ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    <Pagination
+                      items={activeOrders}
+                      currentPage={currentPage}
+                      itemsPerPage={itemsPerPage}
+                      setCurrentPage={setCurrentPage}
+                    />
+                  </TabPanel>
 
-                <TabPanel>
-                <Box overflowX="auto">
-                  <Table variant="simple">
-                    <Thead>
-                      <Tr>
-                        <Th>Market</Th>
-                        <Th>Side</Th>
-                        <Th>Amount</Th>
-                        <Th>Odds</Th>
-                        <Th>Filled Amount</Th>
-                        <Th>Status</Th>
-                        <Th>Timestamp</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                    {pastOrders
-                      .sort((a, b) => b.timestamp - a.timestamp)
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                      .map((order) => (
-                          <Tr key={order.id}>
-                            <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
-                            <Td>
-                              <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
-                                {order.side}
-                              </Badge>
-                            </Td>
-                            <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} CMDX</Td>
-                            <Td>{(order.odds / 100).toFixed(2)}</Td>
-                            <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} CMDX</Td>
-                            <Td>
-                              <Badge colorScheme={order.status === 'Filled' ? 'green' : 'gray'}>
-                                {order.status}
-                              </Badge>
-                            </Td>
-                            <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
+                  <TabPanel>
+                    <Box overflowX="auto">
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>Market</Th>
+                            <Th>Amount</Th>
+                            <Th>Odds</Th>
+                            <Th>Role</Th>
+                            <Th>Status</Th>
+                            <Th>Timestamp</Th>
+                            <Th>Action</Th>
                           </Tr>
-                        ))}
-                    </Tbody>
-                  </Table>
-                </Box>
-                <Pagination 
-                  items={pastOrders}
-                  currentPage={currentPage}
-                  itemsPerPage={itemsPerPage}
-                  setCurrentPage={setCurrentPage}
-                />
-                </TabPanel>
+                        </Thead>
+                        <Tbody>
+                          {matchedBets
+                            .sort((a, b) => b.timestamp - a.timestamp)
+                            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                            .map((bet) => {
+                              const isBackUser = bet.back_user === walletAddress;
+                              const market = markets.find(m => m.id === bet.market_id);
+                              const marketResolved = market?.status === 'Resolved';
+                              return (
+                                <Tr key={bet.id}>
+                                  <Td>{market?.question}</Td>
+                                  <Td>{(parseFloat(bet.amount) / 1000000).toFixed(2)} OSMO</Td>
+                                  <Td>{(bet.odds / 100).toFixed(2)}</Td>
+                                  <Td>
+                                    <Badge colorScheme={isBackUser ? 'green' : 'red'}>
+                                      {isBackUser ? 'Back' : 'Lay'}
+                                    </Badge>
+                                  </Td>
+                                  <Td>
+                                    {bet.redeemed ? (
+                                      <Badge colorScheme="green">Redeemed</Badge>
+                                    ) : marketResolved ? (
+                                      <Badge colorScheme="yellow">Ready to Redeem</Badge>
+                                    ) : (
+                                      <Badge colorScheme="blue">Active</Badge>
+                                    )}
+                                  </Td>
+                                  <Td>{new Date(bet.timestamp * 1000).toLocaleString()}</Td>
+                                  <Td>
+                                    <Tooltip label={!marketResolved ? "Market not yet resolved" : bet.redeemed ? "Already redeemed" : "Redeem your winnings"}>
+                                      <Button
+                                        onClick={() => redeemWinnings(bet.id)}
+                                        isDisabled={!marketResolved || bet.redeemed}
+                                        bgGradient="linear(to-r, green.400, teal.500)"
+                                        color="white"
+                                        _hover={{
+                                          bgGradient: "linear(to-r, green.500, teal.600)",
+                                          transform: 'translateY(-2px)',
+                                          boxShadow: 'lg',
+                                        }}
+                                        _active={{
+                                          transform: 'translateY(0)',
+                                          boxShadow: 'md',
+                                        }}
+                                        size="sm"
+                                        fontWeight="bold"
+                                        borderRadius="full"
+                                        leftIcon={<FaCheckCircle />}
+                                      >
+                                        Redeem
+                                      </Button>
+                                    </Tooltip>
+                                  </Td>
+                                </Tr>
+                              );
+                            })}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    <Pagination
+                      items={matchedBets}
+                      currentPage={currentPage}
+                      itemsPerPage={itemsPerPage}
+                      setCurrentPage={setCurrentPage}
+                    />
+                  </TabPanel>
+
+                  <TabPanel>
+                    <Box overflowX="auto">
+                      <Table variant="simple">
+                        <Thead>
+                          <Tr>
+                            <Th>Market</Th>
+                            <Th>Side</Th>
+                            <Th>Amount</Th>
+                            <Th>Odds</Th>
+                            <Th>Filled Amount</Th>
+                            <Th>Status</Th>
+                            <Th>Timestamp</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {pastOrders
+                            .sort((a, b) => b.timestamp - a.timestamp)
+                            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                            .map((order) => (
+                              <Tr key={order.id}>
+                                <Td>{markets.find(m => m.id === order.market_id)?.question}</Td>
+                                <Td>
+                                  <Badge colorScheme={order.side === 'Back' ? 'green' : 'red'}>
+                                    {order.side}
+                                  </Badge>
+                                </Td>
+                                <Td>{(parseFloat(order.amount) / 1000000).toFixed(2)} OSMO</Td>
+                                <Td>{(order.odds / 100).toFixed(2)}</Td>
+                                <Td>{(parseFloat(order.filled_amount) / 1000000).toFixed(2)} OSMO</Td>
+                                <Td>
+                                  <Badge colorScheme={order.status === 'Filled' ? 'green' : 'gray'}>
+                                    {order.status}
+                                  </Badge>
+                                </Td>
+                                <Td>{new Date(order.timestamp * 1000).toLocaleString()}</Td>
+                              </Tr>
+                            ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    <Pagination
+                      items={pastOrders}
+                      currentPage={currentPage}
+                      itemsPerPage={itemsPerPage}
+                      setCurrentPage={setCurrentPage}
+                    />
+                  </TabPanel>
                 </TabPanels>
               </Tabs>
             </MotionBox>
